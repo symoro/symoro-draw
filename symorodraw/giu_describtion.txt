@@ -1,0 +1,53 @@
+IDENTIFERS:
+
+//menu (callback)
+MENU_BAR
+	FILE
+		NEW (OnNew)
+		EXPORT (OnExport)
+		EXIT (OnExit)
+	DRAW
+		JOINTS
+			J_PRISMATIC (OnPrismatic)
+			J_REVOLUTE (OnRevolute)
+			J_FIXED (OnFixed)
+		PLANES
+			P_1 (OnPlane1)
+			P_2 (OnPlane2)
+			P_3 (OnPlane3)
+		REFERENCES
+			R_LINE (OnRefLine)
+			R_POINT (OnRefPoint)
+	TOOLBARS
+		T_DRAW (OnShowDraw)
+		T_VIEW (OnShowView)
+	VIEW
+		FRONT (OnFront)
+		TOP (OnTop)
+		RIGHT (OnRight)
+		ISOMETRIC (OnIsometric)
+		--- SEP1 ---
+		ZOOM (OnZoom)
+		PAN (OnPan)
+		ROTATE (OnRotate)
+
+//gui (callback)
+MAIN
+	CANVAS
+	PANEL
+		PANEL_SIZE
+			GRID
+				ON_JOINTS
+					ON_REVOLUTE (OnRevolute)
+					ON_PRISMATIC (OnPrismatic)
+					ON_FIXED (OnFixed)
+				ON_PLANES
+					ON_PLANE3 (OnPlane1)
+					ON_PLANE2 (OnPlane2)
+					ON_PLANE1 (OnPlane3)
+				ON_REFERENCES
+					ON_LINE (OnRefLine)
+					ON_POINT (OnRefPoint)
+
+
+

@@ -145,19 +145,36 @@ class data():
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnDelete'
                                     }
-        self.widgets['ON_CHANGE_ANC'] = {'w_type':'button',
-                                    'label':'Ancestor',
+        self.widgets['ON_ADD_ANC'] = {'w_type':'button',
+                                    'label':'Add Ancestor',
                                     'parent':'PANEL_JOINT_SIZER',
                                     'position':0,
                                     'panel':'PANEL_SIDE',
-                                    'callback':'OnChangeAncestor',
+                                    'callback':'OnAddAncestor',
                                     'checked':False,
+                                    'active':False
+                                    }
+        self.widgets['ON_REM_ANC'] = {'w_type':'button',
+                                    'label':'Remove Ancestor',
+                                    'parent':'PANEL_JOINT_SIZER',
+                                    'position':1,
+                                    'panel':'PANEL_SIDE',
+                                    'callback':'OnRemoveAncestor',
+                                    'checked':False,
+                                    'active':False
+                                    }
+        self.widgets['ON_CHANGE_DIR'] = {'w_type':'button',
+                                    'label':'Z Direction',
+                                    'parent':'PANEL_JOINT_SIZER',
+                                    'position':2,
+                                    'panel':'PANEL_SIDE',
+                                    'callback':'OnChangeAxis',
                                     'active':False
                                     }
         self.widgets['ON_ACTIVE'] = {'w_type':'check_box',
                                     'label':'Active',
                                     'parent':'PANEL_JOINT_SIZER',
-                                    'position':1,
+                                    'position':3,
                                     'panel':'PANEL_SIDE',
                                     'checked':False,
                                     'active':False
@@ -165,7 +182,7 @@ class data():
         self.widgets['ON_CUT_JOINT'] = {'w_type':'check_box',
                                     'label':'Cut Joint',
                                     'parent':'PANEL_JOINT_SIZER',
-                                    'position':2,
+                                    'position':4,
                                     'panel':'PANEL_SIDE',
                                     'checked':False,
                                     'active':False
@@ -421,7 +438,8 @@ class data():
         self.flags['PLANE3'] = [0, 'plane']
         self.flags['PICK'] = [1, 'mouse']
         self.flags['DELETE'] = [0, 'button']
-        self.flags['CHANGE_ANC'] = [0, 'button']
+        self.flags['ADD_ANC'] = [0, 'button']
+        self.flags['REM_ANC'] = [0, 'button']
         self.flags['ACTIVE_JOINT'] = [0, 'active']
 
 ##  Methods widgets

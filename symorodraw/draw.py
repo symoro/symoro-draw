@@ -7,7 +7,7 @@ from wx.glcanvas import GLCanvas
 from wx.glcanvas import GLContext
 
 from pysymoro import robot
-from symoroviz import objects
+from symorodraw import objects
 
 import canvas
 import graphics
@@ -32,11 +32,14 @@ class MainFrame(wx.Frame):
                 self.panels = {}
                 self.grids = {}
                 self.check_boxes = {}
+                self.texts = {}
+                
                 self.menu_bars = {}
                 self.menus = {}
                 self.menu_items = {}
-                self.texts = {}
+                
                 self.mouse = wx.MouseEvent()
+                
                 self.create_menu()
                 self.create_ui()
 
@@ -347,6 +350,7 @@ class MainFrame(wx.Frame):
 
         def OnFront(self, event):
                 self.SetCamera([0,0,1],[0,1,0])
+                
         def OnRight(self, event):
                 self.SetCamera([1,0,0],[0,1,0])
 
@@ -391,8 +395,15 @@ class MainFrame(wx.Frame):
         def OnDelete(self, event):
                 self.Init('DELETE')
 
-        def OnChangeAncestor(self, event):
-                self.Init('CHANGE_ANC')
+        def OnAddAncestor(self, event):
+                self.Init('ADD_ANC')
+
+        def OnRemoveAncestor(self, event):
+                self.Init('REM_ANC')
+
+        def OnChangeAxis(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3] = self.canvas['CANVAS'].EulerTransformation(pi,[0,1,0]).dot(self.canvas['CANVAS'].elements[
+                        self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3])
 
         def Init(self, f_id):
                 if not self.data.FlagGet(f_id):
@@ -404,15 +415,13 @@ class MainFrame(wx.Frame):
 
         def ActiveJoint(self,active,cut,joint_id):
                 for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):
-                        self.data.SetValue(key, 'active', True)
                         self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue(key,'position'))
-                        self.check_boxes['ON_ACTIVE'].SetValue(active)
-                        self.check_boxes['ON_CUT_JOINT'].SetValue(cut)
+                self.check_boxes['ON_ACTIVE'].SetValue(active)
+                self.check_boxes['ON_CUT_JOINT'].SetValue(cut)
                 self.data.FlagSet('ACTIVE_JOINT',joint_id)
 
         def DeactiveJoint(self):
                 for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):
-                        self.data.SetValue(key, 'active', True)
                         self.sizers['PANEL_JOINT_SIZER'].Hide(self.data.GetValue(key,'position'))
                 self.data.FlagReset('ACTIVE_JOINT')
 

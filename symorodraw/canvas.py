@@ -106,7 +106,7 @@ class myGLCanvas(GLCanvas):
         self.CaptureMouse()
         self.lastx, self.lasty = evt.GetPosition()
         
-        if not self.parent.data.FlagGet('CHANGE_ANC'):
+        if not (self.parent.data.FlagGet('ADD_ANC') or self.parent.data.FlagGet('REM_ANC')):
             self.DeactivateJoint()
         
         for key in self.parent.data.FlagList('joint'):
@@ -118,13 +118,14 @@ class myGLCanvas(GLCanvas):
                self.CreateJoint(key)
 
         if self.parent.data.FlagGet('PICK'):
-            print 'pick'
             my_buffer = self.Pick()
             self.DefinePlane(my_buffer)
             if self.parent.data.FlagGet('DELETE'):
                 self.OnDelete(my_buffer)
-            elif self.parent.data.FlagGet('CHANGE_ANC'):
-                self.ChangeAncestor(my_buffer)
+            elif self.parent.data.FlagGet('ADD_ANC'):
+                self.AddAncestor(my_buffer)
+            elif self.parent.data.FlagGet('REM_ANC'):
+                self.RemAncestor(my_buffer)
             else:
                 self.ActivateJoint(my_buffer)
                 
@@ -157,30 +158,48 @@ class myGLCanvas(GLCanvas):
             self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].cut_joint=self.parent.check_boxes['ON_CUT_JOINT'].GetValue()
             self.parent.DeactiveJoint()
 
-    def ChangeAncestor(self, my_buffer):
+    def AddAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not isinstance(self.elements[name[0]-1],Point):
                 if not name[0]:
-                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = [0,0,0]
+                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos.append([0,0,0])
                 else:
-                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = self.elements[name[0]-1].T[3,0:3]
-                for remove in self.structure:
-                    remove[1] = [i for i in remove[1] if not i==self.parent.data.FlagGet('ACTIVE_JOINT')]
-                        
-                self.structure[name[0]][1].append(self.parent.data.FlagGet('ACTIVE_JOINT'))
-                self.parent.data.FlagReset('CHANGE_ANC')
+                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos.append(self.elements[name[0]-1].T[3,0:3])
+                if not self.parent.data.FlagGet('ACTIVE_JOINT') in self.structure[name[0]][1]:
+                    self.structure[name[0]][1].append(self.parent.data.FlagGet('ACTIVE_JOINT'))
+                self.parent.data.FlagReset('ADD_ANC')
+                print self.structure
                 break
+
+    def RemAncestor(self, my_buffer):
+        for a, b, name in my_buffer:
+            if not isinstance(self.elements[name[0]-1],Point):
+                self.structure[name[0]][1]=[i for i in self.structure[name[0]][1] if not i==self.parent.data.FlagGet('ACTIVE_JOINT')]
+                if name[0]:
+                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = [
+                        i for i in self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos if not all(i==self.elements[name[0]-1].T[3,0:3])]
+                else:
+                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = [
+                        i for i in self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos if not all(i==[0,0,0])]
+                    
+                self.parent.data.FlagReset('REM_ANC')
+                print self.structure
+                break
+                        
 
     def OnDelete(self, my_buffer):
         for a, b, name in my_buffer:
-            if not name[0]==0:
-                for i in range(len(self.structure)):
-                    if self.structure[i][0]==name[0]:
-                        self.structure[i-1][1] += self.structure[i][1]
-                        for j in self.structure[i][1]:
-                            self.elements[j-1].anc_pos = self.elements[self.structure[i][0]-1].T[3,0:3]
-                                
+            if name[0]:
+                
+                remove = [i for i in self.structure if i[0]==name[0]]
+                
+                for position in remove:
+                    for element in position[1]:
+                        self.elements[element-1].anc_pos = [
+                            k for k in self.elements[element-1].anc_pos if not all(k==self.elements[name[0]-1].T[3,0:3])]
+                    
                 self.structure = [i for i in self.structure if not i[0]==name[0]]
+
                 for element in self.structure:
                     element[1] = [i for i in element[1] if not i==name[0]]
                     element[1] = [i-1 if i>name[0] else i for i in element[1]]
@@ -191,6 +210,7 @@ class myGLCanvas(GLCanvas):
                 del self.elements[name[0]-1]
                 self.my_id -= 1
                 self.parent.data.FlagReset('DELETE')
+                print self.structure
                 break
                 
         
@@ -300,7 +320,7 @@ class myGLCanvas(GLCanvas):
             s = check[2]-vect[0][2]*t-vect[1][2]*r      
         else:
             s = 0
-        print norm(cross(vect[0],vect[1]))
+        print 'check', check
                             
         if norm(cross(vect[0],vect[1]))<0.01 or s > 2:
             print 'Cannot create the plane, line to not intersect'
@@ -318,11 +338,12 @@ class myGLCanvas(GLCanvas):
         print 'Creating plane'
             
         self.cen = point
-        self.cam = add(self.cen,multiply(normal,5))
+        
         up = cross(line,normal)
         self.up = up/norm(up)
         
         self.cen = self.cen + multiply(up,0.01)
+        self.cam = add(self.cen,multiply(normal,5))
         self.plane[:] = []
         self.CameraTransformation()
         self.OnDraw()
@@ -371,11 +392,11 @@ class myGLCanvas(GLCanvas):
         R = self.EulerTransformation(angle, self.u/norm(self.u))
         T = vstack((hstack((R,vstack(([0,0,0])))),[0,0,0,1]))
         
-##        Ry = self.EulerTransformation(pi/2, [1,0,0])
-##        T2 = vstack((hstack((Ry,vstack(([0,0,0])))),[0,0,0,1]))
         T = inv(G).dot(T)
         T[3,0:3]=self.GetCoordinates(self.origin[0], self.origin[1])
 
+##        T3 = T
+##        T3[0:3,0:3] = self.EulerTransformation(pi, [0,1,0]).dot(T[0:3,0:3])
         self.DrawElements(T=T,my_type=my_type)
         self.OnDraw()
         self.Redraw()
@@ -398,10 +419,9 @@ class myGLCanvas(GLCanvas):
         r /= norm(r)
         up = cross(r,u)
         up = up/norm(up)
-        d = norm([screenX,screenY])
-        a = atan2(screenY, screenX)
-        dy = multiply(up,sin(a)*d)
-        dx = multiply(r,cos(a)*d)
+        dy = multiply(up,screenY)
+        dx = multiply(r,screenX)
+
 
         trans = dy+dx+self.cen
 ##        print trans
@@ -443,15 +463,13 @@ class myGLCanvas(GLCanvas):
     def Pan(self,dx,dy):
         coefY = norm(self.u)*tan(radians(self.fov/2))/self.size.height*2
         coefX = norm(self.u)*tan(radians(self.fov/2))/self.size.width*2*self.aspect
-        d= norm(dx+dy)
-        a = atan2(dy,dx)
         u = self.u/norm(self.u)
         r = cross(self.up,self.u)
         r /= norm(r)
         up = cross(self.u,r)
         up /= norm(up)
-        dx = multiply(d*cos(a)*coefX*0.25,r)
-        dy = multiply(coefY*d*sin(a)*0.5,up)
+        dx = multiply(dx*coefX*0.25,r)
+        dy = multiply(coefY*dy*0.5,up)
         self.cen += add(dx,dy)
 
     def Rotate(self,dx,dy):
@@ -531,8 +549,9 @@ class myGLCanvas(GLCanvas):
                 self.elements.append(SuperRevoluteJoint(self.my_id,T,0))
             self.elements[-1].set_length(0.5)
             if not len(self.elements)==1:    
-                self.elements[-1].anc_pos = self.elements[self.structure[-1][0]-1].T[3,0:3]
-                print self.elements[self.structure[-1][0]-1].T[3,0:3]
+                self.elements[-1].anc_pos.append(self.elements[self.structure[-1][0]-1].T[3,0:3])
+            else:
+                self.elements[-1].anc_pos.append([0,0,0])
             self.structure[-1][1].append(self.my_id)
             self.structure.append([self.my_id,[]])
             

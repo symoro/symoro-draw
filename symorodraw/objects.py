@@ -73,7 +73,7 @@ class Frame(object):
         
     def draw_frames(self):
         gL.glPushMatrix()
-##        gL.glMultMatrixf(self.T)
+        gL.glMultMatrixf(self.T)
         self.draw_frame()
         for child in self.children:
             child.draw_frames()
@@ -98,7 +98,7 @@ class Frame(object):
 
 class JointObject(Frame):
 
-    def __init__(self, index, theta=0., r=0., alpha=0., d=0., gamma=0., b=0.):
+    def __init__(self, index, theta=0., r=0., alpha=0., d=0., gamma=0., b=0., my_id = 0, T = identity(4)):
         super(JointObject, self).__init__(index)
         self.theta = theta
         self.r = r
@@ -108,7 +108,18 @@ class JointObject(Frame):
         self.b = b
         self.shift = 0.
         self.init_length = 0.
+        
         self.named = False
+        self.T = T
+        self.my_id = my_id
+        self.vxaxis = [0,0,0]
+        self.pxaxis = [0,0,0]
+        self.anc_pos = []
+        self.active = False
+        self.cut_joint = False
+        self.color_j = [1,1,1]
+        self.color_l = [1,1,1]
+        self.show_joint = True
 
     def draw_rod(self, length):
         gL.glPushMatrix()
@@ -173,16 +184,34 @@ class JointObject(Frame):
                 Primitives.rod_array(new_length)
             self.init_length = new_length
         self.length = new_length
-        super(JointObject, self).set_length(new_length)       
+        super(JointObject, self).set_length(new_length)
+
+
+    def draw_frame(self):
+            gL.glColor3f(1, 0, 0)
+            gL.glPushName(1)
+            self.draw_arrow()
+            gL.glPopName()
+            gL.glRotatef(90, 0, 0, 1)
+            gL.glColor3f(0, 1, 0)
+            gL.glPushName(2)
+            self.draw_arrow()
+            gL.glPopName()
+            gL.glRotatef(-90, 0, 1, 0)
+            gL.glColor3f(0, 0, 1)
+            gL.glPushName(3)
+            self.draw_arrow()
+            gL.glPopName() 
 
 class RevoluteJoint(JointObject):
 
-    def __init__(self, *args):
-        super(RevoluteJoint, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(RevoluteJoint, self).__init__(*args, **kwargs)
         self.q_init = self.theta
+        self.color_j = [1,1,0]
 
     def draw_joint(self):
-        gL.glColor3f(1., 1., 0.)
+        gL.glColor3f(self.color_j[0], self.color_j[1], self.color_j[2])
         gL.glVertexPointer(3, gL.GL_FLOAT, 0, self.cyl_vertices)
         gL.glNormalPointer(gL.GL_FLOAT, 0, self.cyl_normals)
         gL.glDrawElements(gL.GL_TRIANGLES, len(self.cyl_indices),
@@ -204,12 +233,13 @@ class RevoluteJoint(JointObject):
 
 class PrismaticJoint(JointObject):
 
-    def __init__(self, *args):
-        super(PrismaticJoint, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(PrismaticJoint, self).__init__(*args, **kwargs)
         self.q_init = self.r
-
+        self.color_j = [1,0.6,0]
+        
     def draw_joint(self):
-        gL.glColor3f(1., 0.6, 0.)
+        gL.glColor3f(self.color_j[0], self.color_j[1], self.color_j[2])
         gL.glVertexPointer(3, gL.GL_FLOAT, 0, self.box_vertices)
         gL.glNormalPointer(gL.GL_FLOAT, 0, self.box_normals)
         gL.glDrawArrays(gL.GL_QUADS, 0, 24)
@@ -257,31 +287,52 @@ class PrismaticJoint(JointObject):
             child.draw()
         gL.glPopMatrix()
 
+
+
+class FixedJoint(JointObject):
+
+    def __init__(self, *args, **kwargs):
+        super(FixedJoint, self).__init__(*args, **kwargs)
+        self.color_j = [1,0,1]
+
+    def draw_joint(self):
+        gL.glColor3f(self.color_j[0], self.color_j[1], self.color_j[2])
+        gL.glVertexPointer(3, gL.GL_FLOAT, 0, self.sph_vertices)
+        gL.glNormalPointer(gL.GL_FLOAT, 0, self.sph_normals)
+        gL.glDrawElements(gL.GL_TRIANGLES, len(self.sph_indices),
+                          gL.GL_UNSIGNED_INT, self.sph_indices)
+
+    def set_length(self, new_length):
+        self.sph_vertices, self.sph_indices, self.sph_normals = \
+            Primitives.sph_array(new_length)
+        super(FixedJoint, self).set_length(new_length)
+
 class SuperRevoluteJoint(RevoluteJoint):
-    def __init__(self, my_id, T, *args):
-        super(SuperRevoluteJoint, self).__init__(*args)
-        self.T = T
-        self.my_id = my_id
-        self.named = False
-        self.anc_pos = []
-        self.active = False
-        self.cut_joint = False
-        self.color_j = [1,1,0]
-        self.color_l = [1,1,1]
+    def __init__(self, *args, **kwargs):
+        super(SuperRevoluteJoint, self).__init__(*args, **kwargs)
 
     def draw_joint(self):
         if not self.named:
             gL.glPushName(self.my_id)
             self.named = True
-        gL.glPushMatrix()    
+            
+        gL.glLoadName(self.my_id)
+        gL.glPushMatrix()
         gL.glMultMatrixf(self.T)
-        gL.glColor3f(self.color_j[0], self.color_j[1], self.color_j[2])
-        self.draw_arrow()
-        gL.glRotatef(90,0,1,0)
-        gL.glVertexPointer(3, gL.GL_FLOAT, 0, self.cyl_vertices)
-        gL.glNormalPointer(gL.GL_FLOAT, 0, self.cyl_normals)
-        gL.glDrawElements(gL.GL_TRIANGLES, len(self.cyl_indices),
-                          gL.GL_UNSIGNED_INT, self.cyl_indices)
+        
+        if self.show_joint: 
+            
+            gL.glColor3f(self.color_j[0], self.color_j[1], self.color_j[2])
+            gL.glPushName(4)
+            self.draw_arrow()
+            gL.glPopName()
+##            gL.glRotatef(90,0,1,0)
+            gL.glPushName(0)
+            super(SuperRevoluteJoint, self).draw_joint()
+            gL.glPopName()
+        if self.show_frame:
+            self.draw_frame()
+            
         gL.glPopMatrix()
         gL.glPopName()
         gL.glColor3f(self.color_l[0], self.color_l[1], self.color_l[2])
@@ -292,30 +343,31 @@ class SuperRevoluteJoint(RevoluteJoint):
             gL.glEnd()
 
 class SuperPrismaticJoint(PrismaticJoint):
-    def __init__(self, my_id, T, *args):
-        super(SuperPrismaticJoint, self).__init__(*args)
-        self.T = T
-        self.my_id = my_id
-        self.named = False
-        self.anc_pos = []
-        self.active = False
-        self.cut_joint = False
-        self.color_j = [1,0.6,0]
-        self.color_l = [1,1,1]
+    def __init__(self, *args, **kwargs):
+        super(SuperPrismaticJoint, self).__init__(*args, **kwargs)
+
 
     def draw_joint(self):
         if not self.named:
             gL.glPushName(self.my_id)
             self.named = True
             
+        gL.glLoadName(self.my_id)
         gL.glPushMatrix()
         gL.glMultMatrixf(self.T)
-        gL.glColor3f(self.color_j[0], self.color_j[1], self.color_j[2])
-        self.draw_arrow()
-        gL.glRotatef(90,0,1,0)
-        gL.glVertexPointer(3, gL.GL_FLOAT, 0, self.box_vertices)
-        gL.glNormalPointer(gL.GL_FLOAT, 0, self.box_normals)
-        gL.glDrawArrays(gL.GL_QUADS, 0, 24)
+        
+        if self.show_joint: 
+            gL.glColor3f(self.color_j[0], self.color_j[1], self.color_j[2])
+            gL.glPushName(4)
+            self.draw_arrow()
+            gL.glPopName()
+##            gL.glRotatef(90,0,1,0)
+            gL.glPushName(0)
+            super(SuperPrismaticJoint, self).draw_joint()
+            gL.glPopName()
+        if self.show_frame:
+            self.draw_frame()
+            
         gL.glPopMatrix()
         gL.glPopName()
         gL.glColor3f(self.color_l[0], self.color_l[1], self.color_l[2])
@@ -326,22 +378,35 @@ class SuperPrismaticJoint(PrismaticJoint):
             gL.glEnd()
 
 
-class FixedJoint(JointObject):
-
-    def __init__(self, *args):
-        super(FixedJoint, self).__init__(*args)
+class SuperFixedJoint(FixedJoint):
+    def __init__(self, *args, **kwargs):
+        super(SuperFixedJoint, self).__init__(*args, **kwargs)
 
     def draw_joint(self):
-        gL.glColor3f(1., 0., 1.)
-        gL.glVertexPointer(3, gL.GL_FLOAT, 0, self.sph_vertices)
-        gL.glNormalPointer(gL.GL_FLOAT, 0, self.sph_normals)
-        gL.glDrawElements(gL.GL_TRIANGLES, len(self.sph_indices),
-                          gL.GL_UNSIGNED_INT, self.sph_indices)
+        if not self.named:
+            gL.glPushName(self.my_id)
+            self.named = True
 
-    def set_length(self, new_length):
-        self.sph_vertices, self.sph_indices, self.sph_normals = \
-            Primitives.sph_array(new_length)
-        super(FixedJoint, self).set_length(new_length)
+        gL.glLoadName(self.my_id)
+        gL.glPushMatrix()
+        gL.glMultMatrixf(self.T)
+        if self.show_joint:
+            gL.glPushName(0)
+            super(SuperFixedJoint, self).draw_joint()
+            gL.glPopName()
+        if self.show_frame:
+            self.draw_frame()
+
+        gL.glPopMatrix()
+        gL.glPopName()
+        gL.glColor3f(self.color_l[0], self.color_l[1], self.color_l[2])
+        for link in self.anc_pos:
+            gL.glBegin(gL.GL_LINES)
+            gL.glVertex3f(self.T[3][0], self.T[3][1], self.T[3][2])
+            gL.glVertex3f(link[0], link[1], link[2])
+            gL.glEnd()
+
+    
 
 class Point(FixedJoint):
     def __init__(self, pos, my_id, *args):

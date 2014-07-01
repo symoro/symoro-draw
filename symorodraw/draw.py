@@ -254,8 +254,19 @@ class MainFrame(wx.Frame):
                         
 
         def FillStaticSizer(self, key):
-                grid = self.data.GetWidget(key)   
-                self.grids[grid['parent']].Add(self.static_sizers[key], pos=( grid['vertical'],grid['horizontal']))
+                sizer = self.data.GetWidget(key)
+                if self.data.GetValue(sizer['parent'],'w_type') =='panel':
+                        self.panels[sizer['parent']].SetSizerAndFit(self.static_sizers[key])
+                elif self.data.GetValue(sizer['parent'],'w_type') =='grid':
+                        self.grids[sizer['parent']].Add(self.static_sizers[key], pos=( sizer['vertical'],sizer['horizontal']))
+                elif self.data.GetValue(sizer['parent'],'w_type') =='sizer':
+                        if not self.data.CheckKey(key,'proportion'):
+                                sizer['proportion'] = 0
+                        if not self.data.CheckKey(key,'border'):
+                                sizer['border'] = 1
+                        if not self.data.CheckKey(key,'flag'):
+                                sizer['flag'] = wx.EXPAND
+                        self.sizers[sizer['parent']].Add(self.static_sizers[key], proportion=sizer['proportion'], flag=sizer['flag'], border=sizer['border'])
 
         def FillSizer(self, key):
                 sizer = self.data.GetWidget(key)
@@ -400,6 +411,16 @@ class MainFrame(wx.Frame):
 
         def OnRemoveAncestor(self, event):
                 self.Init('REM_ANC')
+
+        def OnDefineD_H(self,event):
+                structures, branches = self.canvas['CANVAS'].DefineStructure()
+                print structures
+                print branches
+##                structures, branches = self.canvas['CANVAS'].GetAxises(structures, branches)
+##                self.canvas['CANVAS'].GetParameters(structures, branches)
+
+        def OnStructure(self,event):
+                pass
 
         def OnChangeAxis(self, event):
                 self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3] = self.canvas['CANVAS'].EulerTransformation(pi,[0,1,0]).dot(self.canvas['CANVAS'].elements[

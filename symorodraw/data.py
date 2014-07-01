@@ -71,7 +71,7 @@ class data():
                                     'callback':'OnPlane3'
                                     }
         self.widgets['ON_PLANE2'] = {'w_type':'button',
-                                    'label':'2 lines',
+                                    'label':'2 Lines',
                                     'parent':'ON_PLANES',
                                      'position':1,
                                      'panel':'PANEL_TOP',
@@ -133,7 +133,7 @@ class data():
         self.widgets['PANEL_JOINT_SIZER'] = {'w_type':'sizer',
                                 'parent':'GRID_SIDE',
                                 'horizontal':0,
-                                'vertical':3,
+                                'vertical':6,
                                 'orientation':wx.VERTICAL
                                     }
         #Panel Side Elements       
@@ -145,9 +145,17 @@ class data():
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnDelete'
                                     }
+        self.widgets['ON_ANCESTORS'] = {'w_type':'static_sizer',
+                                     'label':'Ancestor',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'PANEL_JOINT_SIZER',
+                                     'position':0,
+                                     'active':False,
+                                     'orientation':wx.VERTICAL
+                                    }
         self.widgets['ON_ADD_ANC'] = {'w_type':'button',
-                                    'label':'Add Ancestor',
-                                    'parent':'PANEL_JOINT_SIZER',
+                                    'label':'Add',
+                                    'parent':'ON_ANCESTORS',
                                     'position':0,
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnAddAncestor',
@@ -155,8 +163,8 @@ class data():
                                     'active':False
                                     }
         self.widgets['ON_REM_ANC'] = {'w_type':'button',
-                                    'label':'Remove Ancestor',
-                                    'parent':'PANEL_JOINT_SIZER',
+                                    'label':'Remove',
+                                    'parent':'ON_ANCESTORS',
                                     'position':1,
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnRemoveAncestor',
@@ -166,7 +174,7 @@ class data():
         self.widgets['ON_CHANGE_DIR'] = {'w_type':'button',
                                     'label':'Z Direction',
                                     'parent':'PANEL_JOINT_SIZER',
-                                    'position':2,
+                                    'position':1,
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnChangeAxis',
                                     'active':False
@@ -174,7 +182,7 @@ class data():
         self.widgets['ON_ACTIVE'] = {'w_type':'check_box',
                                     'label':'Active',
                                     'parent':'PANEL_JOINT_SIZER',
-                                    'position':3,
+                                    'position':2,
                                     'panel':'PANEL_SIDE',
                                     'checked':False,
                                     'active':False
@@ -182,10 +190,28 @@ class data():
         self.widgets['ON_CUT_JOINT'] = {'w_type':'check_box',
                                     'label':'Cut Joint',
                                     'parent':'PANEL_JOINT_SIZER',
-                                    'position':4,
+                                    'position':3,
                                     'panel':'PANEL_SIDE',
                                     'checked':False,
                                     'active':False
+                                    }
+        self.widgets['ON_DEFINE_D_H'] = {'w_type':'button',
+                                    'label':'Parameters',
+                                    'parent':'GRID_SIDE',
+                                    'horizontal':0,
+                                    'vertical':3,
+                                    'panel':'PANEL_SIDE',
+                                    'callback':'OnDefineD_H',
+                                    'active':True
+                                    }
+        self.widgets['ON_Structure'] = {'w_type':'button',
+                                    'label':'Structure',
+                                    'parent':'GRID_SIDE',
+                                    'horizontal':0,
+                                    'vertical':4,
+                                    'panel':'PANEL_SIDE',
+                                    'callback':'OnStructure',
+                                    'active':True
                                     }
         
 

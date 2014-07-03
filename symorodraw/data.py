@@ -85,6 +85,61 @@ class data():
                                      'panel':'PANEL_TOP',
                                     'callback':'OnPlane1'
                                     }
+        #Constrains
+        self.widgets['ON_CONSTRAINS'] = {'w_type':'static_sizer',
+                                     'label':'Constraints',
+                                     'panel':'PANEL_TOP',
+                                     'parent':'GRID',
+                                     'horizontal':3,
+                                     'vertical':0,
+                                     'active':True,
+                                     'orientation':wx.HORIZONTAL
+                                    }
+        self.widgets['ON_PARALLEL'] = {'w_type':'button',
+                                    'label':'Parallel',
+                                    'parent':'ON_CONSTRAINS',
+                                    'position':0,
+                                    'panel':'PANEL_TOP',
+                                    'callback':'OnParallel'
+                                    }
+        self.widgets['ON_PERPENDICULAR'] = {'w_type':'button',
+                                    'label':'Perpendicular',
+                                    'parent':'ON_CONSTRAINS',
+                                    'position':1,
+                                    'panel':'PANEL_TOP',
+                                    'callback':'OnPerpendicular'
+                                    }
+        self.widgets['ON_AT_ANGLE'] = {'w_type':'button',
+                                    'label':'At angle',
+                                    'parent':'ON_CONSTRAINS',
+                                    'position':2,
+                                    'panel':'PANEL_TOP',
+                                    'callback':'OnAtAngle'
+                                    }
+        self.widgets['ON_AT_DISTANCE'] = {'w_type':'button',
+                                    'label':'At Distance',
+                                    'parent':'ON_CONSTRAINS',
+                                    'position':3,
+                                    'panel':'PANEL_TOP',
+                                    'callback':'OnAtDistance'
+                                    }
+        #References
+        self.widgets['ON_POINT'] = {'w_type':'button',
+                                    'label':'Link',
+                                    'parent':'ON_REFERENCES',
+                                     'position':1,  
+                                    'panel':'PANEL_TOP',
+                                    'callback':'OnRefPoint'
+                                    }
+        self.widgets['ON_REFERENCES'] = {'w_type':'static_sizer',
+                                         'label':'Links',
+                                     'parent':'GRID',
+                                     'horizontal':2,
+                                     'vertical':0,
+                                      'panel':'PANEL_TOP',   
+                                     'active':True,
+                                     'orientation':wx.HORIZONTAL
+                                    }
 
         #Panels
         self.widgets['PANEL_V'] = {'w_type':'panel',
@@ -146,7 +201,7 @@ class data():
                                     'callback':'OnDelete'
                                     }
         self.widgets['ON_ANCESTORS'] = {'w_type':'static_sizer',
-                                     'label':'Ancestor',
+                                     'label':'Link',
                                      'panel':'PANEL_SIDE',
                                      'parent':'PANEL_JOINT_SIZER',
                                      'position':0,
@@ -160,7 +215,7 @@ class data():
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnAddAncestor',
                                     'checked':False,
-                                    'active':False
+                                    'active':True
                                     }
         self.widgets['ON_REM_ANC'] = {'w_type':'button',
                                     'label':'Remove',
@@ -169,14 +224,165 @@ class data():
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnRemoveAncestor',
                                     'checked':False,
-                                    'active':False
+                                    'active':True
                                     }
+        self.widgets['ON_PARAMETERS'] = {'w_type':'static_sizer',
+                                     'label':'Parameters',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'PANEL_JOINT_SIZER',
+                                     'position':4,
+                                     'active':False,
+                                     'orientation':wx.VERTICAL
+                                    }
+        self.widgets['GRID_JOINT'] = {'w_type':'grid',
+                                'parent':'ON_PARAMETERS',
+                                'position':4,
+                                'horizontal':2,
+                                'vertical':10,
+                                'border':5,
+                                'flag':wx.RIGHT
+                                    }
+
+        self.widgets['TEXT_ALPHA'] = {'w_type':'static_text',
+                                           'label':'al',
+                                     'parent':'GRID_JOINT',
+                                     'horizontal':3,
+                                     'vertical':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                      'size':(20,-1)
+                                    }
+        
+        self.widgets['ON_ALPHA'] = {'w_type':'float_spin',
+                                 'parent':'GRID_JOINT',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnAlpha',
+                                 'position':0,
+                                 'vertical':1,
+                                 'horizontal':3,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        self.widgets['TEXT_D'] = {'w_type':'static_text',
+                                           'label':'d',
+                                     'parent':'GRID_JOINT',
+                                     'horizontal':2,
+                                     'vertical':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                  'size':(20,-1)
+                                    }
+        
+        self.widgets['ON_D'] = {'w_type':'float_spin',
+                                 'parent':'GRID_JOINT',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnD',
+                                 'position':0,
+                                 'vertical':1,
+                                 'horizontal':2,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        self.widgets['TEXT_THETA'] = {'w_type':'static_text',
+                                           'label':'th',
+                                     'parent':'GRID_JOINT',
+                                     'horizontal':5,
+                                     'vertical':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                      'size':(20,-1)
+                                    }
+        
+        self.widgets['ON_THETA'] = {'w_type':'float_spin',
+                                 'parent':'GRID_JOINT',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnTheta',
+                                 'position':0,
+                                 'vertical':1,
+                                 'horizontal':5,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        self.widgets['TEXT_R'] = {'w_type':'static_text',
+                                           'label':'r',
+                                     'parent':'GRID_JOINT',
+                                     'horizontal':4,
+                                     'vertical':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                  'size':(20,-1)
+                                    }
+        
+        self.widgets['ON_R'] = {'w_type':'float_spin',
+                                 'parent':'GRID_JOINT',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnR',
+                                 'position':0,
+                                 'vertical':1,
+                                 'horizontal':4,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        self.widgets['TEXT_GAMMA'] = {'w_type':'static_text',
+                                           'label':'g',
+                                     'parent':'GRID_JOINT',
+                                     'horizontal':1,
+                                     'vertical':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                      'size':(20,-1)
+                                    }
+        
+        self.widgets['ON_GAMMA'] = {'w_type':'float_spin',
+                                 'parent':'GRID_JOINT',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnGamma',
+                                 'position':0,
+                                 'vertical':1,
+                                 'horizontal':1,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        self.widgets['TEXT_B'] = {'w_type':'static_text',
+                                           'label':'b',
+                                     'parent':'GRID_JOINT',
+                                     'horizontal':0,
+                                     'vertical':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                  'size':(20,-1)
+                                    }
+        
+        self.widgets['ON_B'] = {'w_type':'float_spin',
+                                 'parent':'GRID_JOINT',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnB',
+                                 'position':0,
+                                 'vertical':1,
+                                 'horizontal':0,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        
+        
         self.widgets['ON_CHANGE_DIR'] = {'w_type':'button',
                                     'label':'Z Direction',
                                     'parent':'PANEL_JOINT_SIZER',
                                     'position':1,
                                     'panel':'PANEL_SIDE',
-                                    'callback':'OnChangeAxis',
+                                    'callback':'OnChangeZAxis',
                                     'active':False
                                     }
         self.widgets['ON_ACTIVE'] = {'w_type':'check_box',
@@ -185,7 +391,8 @@ class data():
                                     'position':2,
                                     'panel':'PANEL_SIDE',
                                     'checked':False,
-                                    'active':False
+                                    'active':False,
+                                    'callback':'OnActive'
                                     }
         self.widgets['ON_CUT_JOINT'] = {'w_type':'check_box',
                                     'label':'Cut Joint',
@@ -193,7 +400,8 @@ class data():
                                     'position':3,
                                     'panel':'PANEL_SIDE',
                                     'checked':False,
-                                    'active':False
+                                    'active':False,
+                                    'callback':'OnCut'
                                     }
         self.widgets['ON_DEFINE_D_H'] = {'w_type':'button',
                                     'label':'Parameters',
@@ -204,7 +412,7 @@ class data():
                                     'callback':'OnDefineD_H',
                                     'active':True
                                     }
-        self.widgets['ON_Structure'] = {'w_type':'button',
+        self.widgets['ON_STRUCTURE'] = {'w_type':'button',
                                     'label':'Structure',
                                     'parent':'GRID_SIDE',
                                     'horizontal':0,
@@ -216,30 +424,7 @@ class data():
         
 
 
-        #References
-        self.widgets['ON_LINE'] = {'w_type':'button',
-                                    'label':'Line',
-                                    'parent':'ON_REFERENCES',
-                                    'position':2, 
-                                    'callback':'OnRefLine',
-                                   'panel':'PANEL_TOP'
-                                    }
-        self.widgets['ON_POINT'] = {'w_type':'button',
-                                    'label':'Point',
-                                    'parent':'ON_REFERENCES',
-                                     'position':1,
-                                    'panel':'PANEL_TOP',
-                                    'callback':'OnRefPoint'
-                                    }
-        self.widgets['ON_REFERENCES'] = {'w_type':'static_sizer',
-                                         'label':'References',
-                                     'parent':'GRID',
-                                     'horizontal':2,
-                                     'vertical':0,
-                                      'panel':'PANEL_TOP',   
-                                     'active':True,
-                                     'orientation':wx.HORIZONTAL
-                                    }
+
 ##        self.widgets['TEXT_REFERENCES'] = {'w_type':'static_text',
 ##                                           'label':'References',
 ##                                     'parent':'GRID',
@@ -467,6 +652,12 @@ class data():
         self.flags['ADD_ANC'] = [0, 'button']
         self.flags['REM_ANC'] = [0, 'button']
         self.flags['ACTIVE_JOINT'] = [0, 'active']
+        self.flags['ACTIVE_LINK'] = [0, 'active']
+        self.flags['MODE'] = [0, 'mode'] # 0 -structure, 1-parameters
+        self.flags['PARALLEL'] = [0, 'constraints']
+        self.flags['PERPENDICULAR'] = [0, 'constraints']
+        self.flags['AT_DISTANCE'] = [0, 'constraints']
+        self.flags['AT_ANGLE'] = [0, 'constraints']
 
 ##  Methods widgets
 

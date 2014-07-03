@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from math import atan2
 
 import wx
@@ -14,21 +13,25 @@ import OpenGL.GLU as glu
 
 from numpy import *
 from numpy.linalg import norm, inv 
-from sympy import Expr
+from sympy import Expr, var, Symbol, Matrix
 import draw
 
 from pysymoro.invgeom import loop_solve
 from pysymoro.geometry import dgm
+from pysymoro.robot import Robot
 from symoroutils import samplerobots
 from symoroutils import symbolmgr
 from symoroutils import tools
+from symoroutils import parfile
+from symoroutils.tools import CLOSED_LOOP, SIMPLE, TREE, TYPES, INT_KEYS
+
 import itertools
 
 from objects import Frame, SuperRevoluteJoint, FixedJoint, SuperPrismaticJoint, JointObject, Point, Line, SuperFixedJoint
 
 
 class myGLCanvas(GLCanvas):
-    def __init__(self, parent, size=(700, 700)):
+    def __init__(self, parent, size=(900, 900)):
         super(myGLCanvas, self).__init__(parent, size=size)
         self.context = GLContext(self)
         self.Bind(wx.EVT_PAINT, self.OnPaintAll)
@@ -38,6 +41,7 @@ class myGLCanvas(GLCanvas):
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnMouseDown)
         self.Bind(wx.EVT_RIGHT_UP, self.OnMouseUp)
         self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDoubleLeft)
         self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
         self.size = self.GetClientSize()
 
@@ -61,9 +65,11 @@ class myGLCanvas(GLCanvas):
         self.elements = []
         self.bufer = []
         self.plane = []
-        self.planes = []
-##        self.structure = []
+        self.structure = []
         self.links = []
+        self.branches = []
+        self.d_init = False
+        self.old_T = []
 
 
     def assign_mono_scale(self):
@@ -107,7 +113,7 @@ class myGLCanvas(GLCanvas):
         self.lastx, self.lasty = evt.GetPosition()
         
         if not (self.parent.data.FlagGet('ADD_ANC') or self.parent.data.FlagGet('REM_ANC')):
-            self.DeactivateJoint()
+            self.Deactivate()
         
         for key in self.parent.data.FlagList('joint'):
             if self.parent.data.FlagGet(key) == 1:
@@ -127,8 +133,16 @@ class myGLCanvas(GLCanvas):
                 self.AddAncestor(my_buffer)
             elif self.parent.data.FlagGet('REM_ANC'):
                 self.RemAncestor(my_buffer)
+            elif self.parent.data.FlagGet('PARALLEL'):
+                self.MakeConstrain(my_buffer, 'PARALLEL')
+            elif self.parent.data.FlagGet('PERPENDICULAR'):
+                self.MakeConstrain(my_buffer, 'PERPENDICULAR')
+            elif self.parent.data.FlagGet('AT_ANGLE'):
+                self.MakeConstrain(my_buffer, 'AT_ANGLE')
+            elif self.parent.data.FlagGet('AT_DISTANCE'):
+                self.MakeConstrain(my_buffer, 'AT_DISTANCE')
             else:
-                self.ActivateJoint(my_buffer)
+                self.Activate(my_buffer)
             
         if self.parent.data.FlagGet('REF_POINT'):
                 self.DrawElements(my_type='POINT', pos = self.GetCoordinates(self.lastx, self.lasty))
@@ -137,425 +151,307 @@ class myGLCanvas(GLCanvas):
                 self.parent.data.FlagReset('REF_POINT')
                 self.parent.data.FlagIncrement('PICK')
 
-    def GetParameters(self, structures, branches):
-        for i in range(len(structures)):
-            print structures[i][4]
-            l_joint = structures[i][4][0]
-            
-            for branch in branches[structures[i][0]:structures[i][1]+1]:
-                for joint in branch:
-                    if not joint==branch[0]:
-                        continue
-                    if not (joint==branch[-1] and [i for i in structures[i][5] if i[2]==joint]):
-                        br = (joint==branch[1] and not branch==branches[structures[i][0]])
-                        self.GetFrame(joint-1,self.elements[l_joint-1].T[0:3,0:3].dot([1,0,0]),
-                                      self.elements[joint-1].T[0:3,0:3].dot([1,0,0]),
-                                      self.elements[l_joint-1].vxaxis,
-                                      self.elements[joint-1].vxaxis,
-                                      self.elements[l_joint-1].T[3,0:3],
-                                      self.elements[joint-1].T[3,0:3],
-                                      self.elements[l_joint-1].pxaxis,
-                                      self.elements[joint-1].pxaxis,
-                                      br)
-                    l_joint = joint
-                    
-            for cut in structures[i][5]:
-                self.GetFrame(cut[1]-1, self.elements[cut[0]-1].T[0:3,0:3].dot([1,0,0]),
-                              self.elements[cut[1]-1].T[0:3,0:3].dot([1,0,0]),
-                              self.elements[cut[0]-1].vxaxis,
-                              self.elements[cut[1]-1].vxaxis,
-                              self.elements[cut[0]-1].T[3,0:3],
-                              self.elements[cut[1]-1].T[3,0:3],
-                              self.elements[cut[0]-1].pxaxis,
-                              self.elements[cut[1]-1].pxaxis,                         
-                              True)
-                
-                self.DrawElements(T=self.elements[cut[0]-1].T , my_type='FIXED')
-                self.elements[-1].show_joint = False
-                self.elements[-1].show_frame = False
-                self.GetFrame(-1, self.elements[cut[2]-1].T[0:3,0:3].dot([1,0,0]),
-                              self.elements[cut[1]-1].T[0:3,0:3].dot([1,0,0]),
-                              self.elements[cut[0]-1].vxaxis,
-                              self.elements[cut[1]-1].vxaxis,
-                              self.elements[cut[2]-1].T[3,0:3],
-                              self.elements[cut[1]-1].T[3,0:3],
-                              self.elements[cut[0]-1].pxaxis,
-                              self.elements[cut[1]-1].pxaxis,
-                              True)
-
-    
-                
-
-    def GetFrame(self, e_id, z0, z1, x0, x1, z0p, z1p, x0p, x1p, branch = False):
-        if branch:
-            u, u0 = self.CommonNormal(z0, z1)
-            gamma = self.DefineAngle(u, x0, z0)
-            self.elements[e_id].b = self.DefinetDistance(u0, u, x0p, x0, z0p, z0)
-        self.elements[e_id].alpha = self.DefineAngle(x0, z0, z1)
-        self.elements[e_id].d = self.DefineDistance(x0p, x0,z0p, z0,z1p, z1)
-        self.elements[e_id].theta = self.DefineAngle(z1, x0, x1)
-        self.elements[e_id].r = self.DefineDistance(z1p, z1, x0p, x0, x1p, x1)
-
-    def Export(self):
-        pass
-
-    def GetAxises(self, structures, branches):
-        print structures
-        print branches
-        for struct in range(len(structures)):
-            pass
-        return structures, branches
-            
         
 
-    def DefineStructure(self):
-##        NJ = len([i for i in self.elements if not isinstance(i, Point)])
-##        NL = len(self.links)
-##        NF = NJ+2*(NL-NJ)
+    def OnMouseDoubleLeft(self, evt):
+        self.parent.data.FlagsChange('joint')
+        self.parent.data.FlagsChange('ref')
+        self.parent.data.FlagsChange('plane')
+        self.parent.data.FlagsChange('button')
+        self.parent.data.FlagsChange('constraints')
+        del self.plane[:]
 
+    def Export(self, name):
+        NJ = len([i for i in self.elements if isinstance(i, SuperRevoluteJoint) or isinstance(i, SuperPrismaticJoint)])
+        NL = len([i for i in self.elements if isinstance(i, Point)])-1
+        NF = NL+2*(NJ-NL)
+        
+        if not self.structure:
+            return
+        if not self.structure[0]-self.structure[1]:
+            structure = SIMPLE
+        elif not NJ-NL:
+            structure = TREE
+        else:
+            structure = CLOSED_LOOP
+
+        robot = Robot(name, NJ=NJ, NL=NL, NF=NF, is_mobile=False,
+                 structure=structure)
+        
+        robot.G = Matrix([var('G1'), var('G2'), var('G3')])
+        if self.structure[4][0]:
+            robot.Z = transpose(self.elements[self.structure[4][0]-1].T)
+
+        frames = []
+        end = []
+        cut = []
+        
+        for branch in self.branches[self.structure[0]:self.structure[1]+1]:
+            fr = [i for i in branch[2:-2] if not isinstance(self.elements[i-1], Point)]
+           
+            if not self.elements[branch[-2]-1].virtual_joint:
+                end.append(branch[-2])
+            else:
+                cut.append(branch[-2])
+
+        frames = fr + end + cut
+
+        sigma, mu, theta, alpha, gamma, d, r, b, ant = [],[],[],[],[],[],[],[],[]
+
+        for frame in frames:
+##            
+            if isinstance(self.elements[frame-1], SuperPrismaticJoint):
+                sigma.append(1)
+            elif isinstance(self.elements[frame-1], SuperRevoluteJoint):
+                sigma.append(0)
+            else:
+                sigma.append(2)
+                
+            i = [i for i in range(len(frames)) if frames[i] == self.elements[frame-1].ant]
+            if len(i)==0 and self.elements[frame-1].ant==self.structure[4][0]:
+                ant.append(0)
+            elif len(i)>0:
+                rant.append(i[0])
+            else:
+                msg = wx.MessageDialog (None, 'Export error, cannot deifne the parameters.', style=wx.OK|wx.CENTRE)
+                msg.ShowModal()
+                return 
+
+            if self.elements[frame-1].active and not self.elements[frame-1].cut_joint:
+                mu.append(1)
+            else:
+                mu.append(0)
+        
+            if isinstance(self.elements[frame-1], SuperRevoluteJoint) and not self.elements[frame-1].virtual_joint:
+                theta.append(var('th%s' % (len(theta+1))))
+            else:
+                theta.append(self.elements[frame-1].theta)
+                
+            if isinstance(self.elements[frame-1], SuperRevoluteJoint) and not self.elements[frame-1].virtual_joint:
+                theta.append(var('r%s' % (len(theta+1))))
+            else:
+                r.append(self.elements[frame-1].r)
+                
+            alpha.append(self.elements[frame-1].alpha)
+            d.append(self.elements[frame-1].d)
+            gamma.append(self.elements[frame-1].gamma)
+            b.append(self.elements[frame-1].b)
+
+        robot.sigma[1:] = sigma
+        robot.theta[1:] = theta
+        robot.alpha[1:] = alpha
+        robot.gamma[1:] = gamma
+        robot.d[1:] = d
+        robot.r[1:] = r
+        robot.b[1:] = b
+        robot.ant[1:] = ant
+        
+                    
+        parfile.writepar(robot)
+        
+                    
+
+    def DefineStructure(self):
         
         branches = []
         links = self.links
         start = 0
         cut_joints = []
-        L = 0
-        structs = []
+        struct = []
+        start = self.FindStart(links, branches)
+        branches.append([])
+        used = []
+        joints = []
+        fixed = [start]
+        my_links = []
         
-        while len(links) and not (start == -1):
-            start = self.FindStart(links, branches)
-            structs.append([])
+        for element in self.elements:
+            if isinstance(element, SuperRevoluteJoint) or isinstance(element, SuperPrismaticJoint):
+                i = [i for i in self.links if i[1]==element.my_id] 
+                if len(i)<2:
+                    msg = wx.MessageDialog (None, 'Cannot define the structure, at least one joint missing conection.', style=wx.OK|wx.CENTRE)
+                    msg.ShowModal()
+                    return struct, branches
+                elif element.cut_joint:
+                    cut_joints.append([i[0][0],i[0][1],i[1][0]])
+
+        NJ = len([i for i in self.elements if isinstance(i, SuperRevoluteJoint) or isinstance(i, SuperPrismaticJoint)])
+        NL = len([i for i in self.elements if isinstance(i, Point)])-1
+
+        if len(cut_joints) < NJ-NL:
+            msg = wx.MessageDialog (None, 'Cannot define the structure, please define more cut joints.', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
+            return struct, branches
+
+        branches[-1], links, used, joints, fixed, my_links = self.GetBranch(start, links, used, joints, fixed, cut_joints, my_links)
+        struct.append(len(branches)-1)
+        
+
+        while len(branches[-1])>1:
+            key = self.FindKey(links, branches)
             branches.append([])
-            used = []
-            joints = []
-            fixed = [start]
-            branches[-1], links, used, joints, fixed = self.GetBranch(start, links, used, joints, fixed, [])
-            structs[-1].append(len(branches)-1)
+            branches[-1], links, used, joints, fixed, my_links= self.GetBranch(key, links, used, joints, fixed, cut_joints, my_links)
 
-            while len(branches[-1])>1:
-                key = self.FindKey(links, branches)
-                branches.append([])
-                branches[-1], links, used, joints, fixed = self.GetBranch(key, links, used, joints, fixed, [])
-            structs[-1].append(len(branches)-2)
-            structs[-1].append(used)
-            structs[-1].append(joints)
-            structs[-1].append(fixed)
-
-            if (len(structs[-1][2])-len(structs[-1][3])):
-                structs[-1].append(self.ChooseCutJoints(structs[-1]))
-                branches.append([])
-                used = []
-                joints = structs[-1][3]
-                fixed = structs[-1][4]
-                branches[-1], links, used, joints, fixed = self.GetBranch(structs[-1][4][0], structs[-1][2], used, structs[-1][3], structs[-1][4], structs[-1][5])
-                structs[-1][0]=(len(branches)-1)
-
-                while len(branches[-1])>1:
-                    key = self.FindKey(links, branches[structs[-1][0]::])
-                    branches.append([])
-                    branches[-1], links, used, joints, fixed = self.GetBranch(key, links, used, structs[-1][3], structs[-1][4], structs[-1][5])
-                    if [i for i in structs[-1][5] if i[1]==branches[-1][0] and (i[0]==branches[-1][1] or i[2]==branches[-1][1])]:
-                        branches[-1] = branches[-1][::-1]
-                structs[-1][1]=(len(branches)-2)
-            
-            
-##        print 'links', links
-##        for branch in branches:
-##            print 'branch', branch
-##        print 'branch start, branch last, links, joints, fixed'
-##        for struct in structs:
-##            print 'struct', struct
-##        print 'free links', len(links)
-        return structs, branches
-
-    def ChooseCutJoints(self, struct):
-        start = struct[4][0]
-        links = struct[2]
-        joints = struct[3]+struct[4]
-        cut_joints = []
-        check = 0
-
-        while check < len(struct[2])-len(struct[3]):
-            print 'len', len(struct[2])-len(struct[3])
-            used = []
-            possible_links = links
-            used.append(start)
-            
-            if possible_links[0][0]==start:
-                joint = possible_links[0][1]
-            else:
-                joint = possible_links[0][0]
-                
-            cut_joint = False
-            used.append(joint)
-            possible_links = possible_links[1::]
-            checked = 0
-            free = possible_links
-            actual_link = []
-            while not cut_joint:
-                if_break = False
-                for link in free:
-                    for i in range(0,2):
-                        if link[i]==joint and not ([used[-2],link[i],link[i-1]] in cut_joints) and not ([link[i-1],link[i],used[-2]] in cut_joints):
-                            joint = link[i-1]
-                            if_break = True
-##                            print 'link'
-                            actual_link = link
-                            if joint in used and len(used[used.index(joint)::])>2:
-                                cut_joint = True
-                            elif joint in used:
-                                checked == 2
-                            elif isinstance(self.elements[joint-1], SuperFixedJoint):
-                                used.append(joint)
-                                cut_joint = True
-                            else:
-                                used.append(joint)
-                                checked = 0
-                            break
-                    if if_break:
-                        free = [i for i in free if not (i==link)]
-##                        print free
-                        break
-                    
-                checked += 1
-                if checked==3:
-                    free = [i for i in free if not (i==actual_link)]
-                    del used[-1]
-                    print 'usss', used
-                    joint = used[-1]
-                    checked = 0
-                    if len(used)>1:
-                        actualt_link = [used[-2],used[-1]]
-                    if not free:
-                        possible_links = [i for i in possible_links if not i==actual_link]
-                        free = possible_links
-                if not possible_links:
-                    check += 1
-                    used = []
-                    break
-            
-            check += 1
-            print 'used1', used
-            if not isinstance(self.elements[joint-1], SuperFixedJoint):
-                used = used[used.index(joint)::]
-            cut = [i for i in used if self.elements[i-1].cut_joint]
-
-            if cut and not used.index(cut[0])==0 and not used.index(cut[0])==len(used)-1:
-                cut_joints.append([used[used.index(cut[0])-1], used[used.index(cut[0])], used[used.index(cut[0])+1]])
-            elif cut and used.index(cut[0])==0:
-                cut_joints.append([used[-1], used[0], used[1]])
-            elif cut:
-                cut_joints.append([used[-2], used[-1], used[0]])
-            else:
-                if not isinstance(self.elements[joint-1], SuperFixedJoint):
-                    used.append(used[0])  
-                if len(used) & 1:
-                    cut = (len(used)-1)/2
-                else:
-                    cut = len(used)/2-1
-                j = -1
-                
-                for i in range(0,cut+1):
-                    if not self.elements[used[cut+i]-1].active:
-                        j = cut+i
-                    elif not self.elements[used[cut-i]-1].active:
-                        j = cut-i
-                    if not j==-1 and not isinstance(self.elements[j-1], SuperFixedJoint):
-                        if not i == cut or j==len(used)-2:
-                            cut_joints.append([used[j-1], used[j], used[j+1]])
-                        elif j==0:
-                            cut_joints.append([used[-2], used[0], used[1]])
-                        else:
-                            cut_joints.append([used[j-1], used[j], used[1]]) 
-                        break
-
-        print 'cut', cut_joints
-        return cut_joints
-
-    def DefineAngle(self, u,s1,s2):
-        s1 /= norm(s1)
-        s2 /= norm(s2)
-        u /= norm(u)
-        s1 = multiply(u.dot(s1),s1)
-        s2 = multiply(u.dot(s2),s2)
-        w1 = subtract(u,s1)
-        w2 = subtract(u,s2)
-        w1 /= norm(w1)
-        w2 /= norm(w2)
-        return atan2(norm(cross(w1,w2)),dot(w1,w2))
-
-    def DefineDistance(self, u0, u, s10, s1, s20, s2):
-        check = u0-s10
-        
-        t1 = (s1[0]*check[1]-s1[1]*check[0])/(s1[0]*u[1]-s1[1]*u[0])
-        t2 = (s2[0]*check[1]-s2[1]*check[0])/(s2[0]*u[1]-s2[1]*u[0])
-
-        return norm(t1,t2)
-
-    def CommonNormal(self, z1, z2):
-        pass    
-        
+        struct.append(len(branches)-2)
+        struct.append(used)
+        struct.append(joints)
+        struct.append(fixed)
+        struct.append(cut_joints)
+        struct.append(my_links)
+        return struct, branches
 
     def FindKey(self, links, branches):
         key = -1
         for branch in branches:
             for link in links:
-                if link[0] in branch:
+                if link[0] in branch[:-1] :
                     return link[0]
-                elif link[1] in branch:
-                    return link[1]
         return key        
 
     def FindStart(self, links, branches):
-        i = [i[0] for i in links if i[0] and isinstance(self.elements[i[0]-1], SuperFixedJoint) and not i[1]]
-        if len(i):
-            if branches:
-                for branch in branches:
-                    for j in i:
-                        if not j in branch:
-                            return j
-            else:
-                return i[0]
-        i = [i[0] for i in links if i[0] and isinstance(self.elements[i[0]-1], SuperFixedJoint)]
-        if len(i):
-            if branches:
-                for branch in branches:
-                    for j in i:
-                        if not j in branch:
-                            return j
-            else:
-                return i[0]
-        i = [i[1] for i in links if i[1] and isinstance(self.elements[i[1]-1], SuperFixedJoint)]
-        if len(i):
-            if branches:
-                for branch in branches:
-                    for j in i:
-                        if not j in branch:
-                            return j
-            else:
-                return i[0]
         i = [i[1] for i in links if not i[1]]
         if len(i):
-            if branches:
-                for branch in branches:
-                    for j in i:
-                        if not j in branch:
-                            return j
-            else:
+            return i[0]
+        else:
+            i = [i[1] for i in links if isinstance(i[1], SuperFixedJoint)]
+            if len(i):
                 return i[0]
         
         return -1
 
-    def GetBranch(self, key, links, used, joints, fixed, cut_joints):
+    def GetBranch(self, key, links, used, joints, fixed, cut_joints, my_links):
         branch = []
         check = True
         branch.append(key)
+        
+        
         while check:
             check = False
             if_break = False
             for link in links:
-                for i in range(0,2):
-                    if link[i]==key and (len(branch)<2 or (not ([branch[-2],key,link[i-1]] in cut_joints) and not ([key,link[i-1],branch[-2]] in cut_joints))):
-                        branch.append(link[i-1])
-                        key = link[i-1]
-                        check = True
-                        if_break = True
-                        remove = link
-                        used.append(remove)
-                        if not key in joints and not isinstance(self.elements[key-1], SuperFixedJoint) and not key==0:
-                            joints.append(key)
-                        elif not key in fixed and (isinstance(self.elements[key-1], SuperFixedJoint) or key==0):
-                            fixed.append(key)
-                        break
+                if link[0]==key:
+                    key = link[0-1]
+                    branch.append(key)
+                    check = True
+                    if_break = True
+                    remove = link
+                    used.append(link)
+                    if not key in joints and not isinstance(self.elements[key-1], SuperFixedJoint) and not key==0:
+                        joints.append(key)
+                    elif not key in fixed and (isinstance(self.elements[key-1], SuperFixedJoint) or key==0):
+                        fixed.append(key)
+                elif link[1]==key and (len(branch)<2 or (not ([branch[-2],branch[-1],link[0]] in cut_joints) and (not ([link[0],branch[-1],branch[-2]] in cut_joints)))):
+
+                    branch.append(link[1-1])
+                    key = link[1-1]
+                    check = True
+                    if_break = True
+                    remove = link
+                    used.append(remove)
+                    if not key in link and isinstance(self.elements[key-1], Point):
+                        my_links.append(key)
                 if if_break:
                     links = [i for i in links if not i==remove]
                     break
-        return  branch, links, used, joints, fixed
+                
+        return  branch, links, used, joints, fixed, my_links
 
-    def ActivateJoint(self, my_buffer):
+    def Activate(self, my_buffer):
         for min_d, max_d, name in my_buffer:
-            if len(name)==2:
-                self.DeactivateJoint()
-                self.parent.ActiveJoint(self.elements[name[0]-1].active,self.elements[name[0]-1].cut_joint,name[0])
-                self.elements[name[0]-1].color_j=[1,0,0]
+            self.elements[name[0]-1].color_j=[1,0,0]
+            self.Deactivate()
+            if len(name)>1:
+                self.parent.ActiveJoint(name[0])
+            elif name[0]==0:
+                self.parent.ActiveJoint(-2)
+            else:
                 self.elements[name[0]-1].color_l=[1,0,0]
-            break            
+                self.parent.ActiveLink(name[0])
+            break
 
-    def DeactivateJoint(self):
+    def Deactivate(self):
         if self.parent.data.FlagGet('ACTIVE_JOINT'):
             if isinstance(self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1],SuperRevoluteJoint):
                 self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].color_j=[1,1,0]
             else:
                 self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].color_j=[1,0.6,0]
-            self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].color_l=[1,1,1]
-            self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].active=self.parent.check_boxes['ON_ACTIVE'].GetValue()
-            self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].cut_joint=self.parent.check_boxes['ON_CUT_JOINT'].GetValue()
-            self.parent.DeactiveJoint()
+            
+        elif self.parent.data.FlagGet('ACTIVE_LINK'):
+            self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].color_j=[0,0.6,0.5]
+            self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].color_l=[1,1,1]
+        self.parent.Deactive()
 
     def AddAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not isinstance(self.elements[name[0]-1],Point) or not name[0]:
-                if not name[0]:
-                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos.append([0,0,0])
-                else:
-                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos.append(self.elements[name[0]-1].T[3,0:3])
-                if not [self.parent.data.FlagGet('ACTIVE_JOINT'),name[0]] in self.links:
-                    self.links.append([self.parent.data.FlagGet('ACTIVE_JOINT'),name[0]])
+                if not [self.parent.data.FlagGet('ACTIVE_LINK'),name[0]] in self.links:
+                    if len([i for i in self.links if i[1]==name[0]])<2:
+                        self.links.append([self.parent.data.FlagGet('ACTIVE_LINK'),name[0]])
+                        if not name[0] and not [i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if all(i==[0,0,0])]:
+                            self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos.append([0,0,0])
+                        elif not [i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if all(i== self.elements[name[0]-1].T[3,0:3])]:
+                            self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos.append(self.elements[name[0]-1].T[3,0:3])
+                
+        
                 self.parent.data.FlagReset('ADD_ANC')
-                print self.links
                 break
 
     def RemAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not isinstance(self.elements[name[0]-1],Point):
-                self.links=[i for i in self.links if not (i==[self.parent.data.FlagGet('ACTIVE_JOINT'),name[0]] or i==[name[0],self.parent.data.FlagGet('ACTIVE_JOINT')])]
+                self.links=[i for i in self.links if not i==[self.parent.data.FlagGet('ACTIVE_LINK'),name[0]]]
 
                 if name[0]:
-                    self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = [
-                        i for i in self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos if not all(i==self.elements[name[0]-1].T[3,0:3])]   
+                    self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos = [
+                        i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if not all(i==self.elements[name[0]-1].T[3,0:3])]
                 else:
                     self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = [
-                        i for i in self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos if not all(i==[0,0,0])]
-                if self.parent.data.FlagGet('ACTIVE_JOINT'):
-                    self.elements[name[0]-1].anc_pos = [
-                        i for i in self.elements[name[0]-1].anc_pos if not all(i==self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].T[3,0:3])]
-                else:
-                    self.elements[name[0]-1].anc_pos = [
-                        i for i in self.elements[name[0]-1].anc_pos if not all(i==[0,0,0])]
+                        i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if not all(i==[0,0,0])]
+                    
                 self.parent.data.FlagReset('REM_ANC')
-                print self.links
                 break
+
+    def MakeConstrain(self, my_buffer, flag):
+            for min_d, max_d, name in my_buffer:
+                if  not name[0] or not isinstance(self.elements[name[0]-1],Point):
+                    if self.parent.data.FlagGet(flag)==1:
+                        self.plane.append(name[0])
+                        self.parent.data.FlagIncrement(flag)
+                    elif not (name[0] in self.plane):
+                        if not self.plane[0]:
+                            axis = self.globFrame
+                        else:
+                            axis = self.elements[self.plane[-1]-1]
+                        if flag=='PARALLEL':
+                            self.elements[name[0]-1].T[0:3,0:3]=axis.T[0:3,0:3]
+                        elif flag=='PERPENDICULAR':
+                            self.elements[name[0]-1].T[0:3,0:3]=self.EulerTransformation(pi/2,[1,0,0]).dot(axis.T[0:3,0:3])
+                        elif flag=='AT_ANGLE':
+                            export = wx.TextEntryDialog(None, 'Give the angle(degrees)',  style=wx.SYSTEM_MENU|wx.OK|wx.CANCEL)
+                            if export.ShowModal()==wx.ID_OK:
+                                self.elements[name[0]-1].T[0:3,0:3]=self.EulerTransformation(radians(int(export.GetValue())),[1,0,0]).dot(axis.T[0:3,0:3])
+                        elif flag=='AT_DISTANCE':
+                            export = wx.TextEntryDialog(None, 'Give the distance',  style=wx.SYSTEM_MENU|wx.OK|wx.CANCEL)
+                            if export.ShowModal()==wx.ID_OK:
+                                val = float(export.GetValue())
+                                u = subtract(self.elements[name[0]-1].T[3,0:3],axis.T[3,0:3])
+                                u /= norm(u)
+                                self.elements[name[0]-1].T[3,0:3]=add(axis.T[3,0:3],multiply(u,val))
+
+                        del self.plane[:]
+                        self.parent.data.FlagReset(flag)
+                    break
                         
 
     def OnDelete(self, my_buffer):
         for a, b, name in my_buffer:
             if name and name[0]:
-                if not name[0]==1:
-                    for element in self.elements:
-                        element.anc_pos = [i if not all(i==self.elements[name[0]-1].T[3,0:3]) else self.elements[name[0]-2].T[3,0:3] for i in element.anc_pos ]
-                        element.anc_pos = [i for i in element.anc_pos if not all(i==element.T[3,0:3])]
-                    self.links = [i if not i[0]==name[0] or
-                                  [self.elements[name[0]-2].my_id, i[1]] in self.links or
-                                  [i[1], self.elements[name[0]-2].my_id] in self.links else
-                                  [self.elements[name[0]-2].my_id, i[1]] for i in self.links]
-                    self.links = [i if not i[1]==name[0] or
-                                  [self.elements[name[0]-2].my_id, i[0]] in self.links or
-                                  [i[0], self.elements[name[0]-2].my_id] in self.links else
-                                  [i[0], self.elements[name[0]-2].my_id] for i in self.links]
+                if len(name)>1:
+                    for l in [i for i in self.links if i[1]==name[0]]:
+                        self.elements[l[0]-1].anc_pos = [i for i in self.elements[l[0]-1].anc_pos if not all(i==self.elements[name[0]-1].T[3,0:3])]   
+                    self.links = [i for i in self.links if not i[1]==name[0]]
                 else:
-                    for element in self.elements:
-                        element.anc_pos = [i if not all(i==self.elements[name[0]-1].T[3,0:3]) else [0,0,0] for i in element.anc_pos ]
-                        element.anc_pos = [i for i in element.anc_pos if not all(i==element.T[3,0:3])]
-                    self.links = [i if not i[0]==1 or
-                                  [0, i[1]] in self.links or
-                                  [i[1], 0] in self.links else
-                                  [0, i[1]] for i in self.links]
-                    self.links = [i if not i[1]==1 or
-                                  [i[0], 0] in self.links or
-                                  [0, i[0]] in self.links else
-                                  [i[0], 0] for i in self.links]
-                    
-                self.links = [i for i in self.links if not (i[0]==name[0] or i[1]==name[0] or i[0]==i[1])]
-                    
+                    self.links = [i for i in self.links if not i[0]==name[0]]                
 
                 for i in self.links:
                     if i[0]>name[0]:
@@ -568,7 +464,6 @@ class myGLCanvas(GLCanvas):
                 del self.elements[name[0]-1]
                 self.my_id -= 1
                 self.parent.data.FlagReset('DELETE')
-                print self.links
                 break
                 
     def DefinePlane(self, my_buffer):
@@ -588,8 +483,6 @@ class myGLCanvas(GLCanvas):
                     elif (not(name[0] and (isinstance(self.elements[name[0]-1], Point) or name[1]==0)) and
                               ((self.parent.data.FlagGet(key) and key == 'PLANE2') or (self.parent.data.FlagGet(key)>1 and key == 'PLANE1'))):
                         self.plane.append(name)
-                        print 'plane2'
-                        print self.plane
                         if self.parent.data.FlagGet(key)==1 and key=='PLANE2':
                             self.parent.data.FlagIncrement(key)
                             break   
@@ -630,7 +523,7 @@ class myGLCanvas(GLCanvas):
         
         if self.plane[1][1]==4:
             axis = self.elements[self.plane[1][0]-1]
-            vect1 = inv(self.elements[self.plane[1][0]-1].T[0:3,0:3]).dot([1,0,0])
+            vect1 = inv(self.elements[self.plane[1][0]-1].T[0:3,0:3]).dot([0,0,1])
         else:
             if not self.plane[1][0]:
                 axis = self.globFrame
@@ -662,7 +555,7 @@ class myGLCanvas(GLCanvas):
         point = []
         for i in range(0,2):
             if self.plane[i][1]==4:
-                vect.append(inv(self.elements[self.plane[i][0]-1].T[0:3,0:3]).dot([1,0,0]))
+                vect.append(inv(self.elements[self.plane[i][0]-1].T[0:3,0:3]).dot([0,0,1]))
                 point.append(self.elements[self.plane[i][0]-1].T[3,0:3])
             else:
                 if not self.plane[i][0]:
@@ -684,12 +577,8 @@ class myGLCanvas(GLCanvas):
             t = (vect[1][0]*check[1]-vect[1][1]*check[0])/(vect[1][0]*vect[0][1]-vect[1][1]*vect[0][0])
             r = (vect[0][0]*t-check[0])/vect[1][0]
             s = check[2]-vect[0][2]*t+vect[1][2]*r
-            print 's', s
         else:
             s = 0
-        print s
-        print 'var1', norm(check)
-        print 'var2', (vect[1][0]*vect[0][1]-vect[1][1]*vect[0][0])
         if norm(cross(vect[0],vect[1]))<0.01 or abs(s) > 0.2:
             print 'Cannot create the plane, line to not intersect'
         else:
@@ -700,8 +589,6 @@ class myGLCanvas(GLCanvas):
         del self.plane[:]
 
     def CreatePlane(self, normal, point, line):
-        print 'Creating plane'
-            
         self.cen = point
         
         up = cross(line,normal)
@@ -757,8 +644,6 @@ class myGLCanvas(GLCanvas):
         T[3,0:3]=self.GetCoordinates(self.origin[0], self.origin[1])
         if my_type=='REVOLUTE' or my_type=='PRISMATIC':
             T[0:3,0:3] = self.EulerTransformation(-pi/2,[0,1,0]).dot(T[0:3,0:3])
-##        T3 = T
-##        T3[0:3,0:3] = self.EulerTransformation(pi, [0,1,0]).dot(T[0:3,0:3])
         self.DrawElements(T=T,my_type=my_type)
         self.OnDraw()
         self.Redraw()
@@ -784,7 +669,6 @@ class myGLCanvas(GLCanvas):
         dx = multiply(r,screenX)
         
         trans = dy+dx+self.cen
-##        print trans
 ##      print glu.gluUnProject(x,y, self.cen[2])               
         return trans
 
@@ -803,7 +687,6 @@ class myGLCanvas(GLCanvas):
             self.cen[0], self.cen[1], self.cen[2],
             self.up[0], self.up[1], self.up[2])
         self.u = subtract(self.cen,self.cam)
-##        self.Refresh(False)
 
     def SetCamera(self, ver, hor):
         u = cross(self.up, self.u/norm(self.u))
@@ -851,6 +734,7 @@ class myGLCanvas(GLCanvas):
             self.globFrame = SuperFixedJoint(0, identity(4), 0)
             self.globFrame.set_length(.5)
             self.globFrame.show_joint = False
+            self.globFrame.theta = 0
             self.my_id = 1
     
         self.OnDraw()
@@ -860,23 +744,155 @@ class myGLCanvas(GLCanvas):
     def OnDraw(self):
         if not self.init:
             return
+        
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
         gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
         
 ##        globFrame.T = self.getCoordinates(self.size.width*0.1, self.size.height*0.9)
 ##        globFrame.set_lenght(0.25)
-
+        
         self.globFrame.draw_joint()
-        for element in self.elements:
-##            print element
-            if isinstance(element, JointObject):
-##                print 'joint'
-                element.draw_joint()     
+
+        if not self.parent.data.FlagGet('MODE'):
+            for element in self.elements:
+##                element.show_frame = False
+                element.draw_joint()
+
+        elif self.branches:
+            gl.glPushMatrix()
+            if self.structure[4][0]:
+                gl.glMultMatrixf(self.elements[self.structure[4][0]-1].T)
+            self.Transform(self.branches[self.structure[0]])
+            gl.glPopMatrix()
         
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_NORMAL_ARRAY)
 
+    def Transform(self, branch):
+        gl.glPushMatrix()
+        for joint in branch:
+            if joint==0 or not isinstance(self.elements[joint-1], Point):
+                if joint:
+                    self.elements[joint-1].draw()
+                else :
+                    self.globFrame.draw()
+                
+            for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
+                self.Transform(k[1:])
+                
+        gl.glPopMatrix()
+
+    def GetParameters(self, branch, start, s_joint):
+        old = s_joint
+        print 'old', old
+        self.old_T.append(start)
+        if_new = True
+        
+        for joint in branch:
+            if joint==0 or not isinstance(self.elements[joint-1], Point):
+                if [i for i in self.structure[5] if i[1]==old and i[2]==joint]:
+                    if isinstance(self.elements[joint-1], SuperRevoluteJoint):
+                        self.DrawElements(my_type='REVOLUTE', T=self.elements[joint-1])
+                    else:
+                        self.DrawElements(my_type='PRISMATIC', T=self.elements[joint-1])
+                    self.elements[-1].show_frame = False
+                    self.elements[-1].show_joint = False
+                    joint = self.elements[-1].my_id
+                    self.elements[-1].virtual_joint = True
+                    
+                if if_new and not self.branches[self.structure[0]][2]:
+                    if joint:
+                        self.elements[joint-1].param = 6
+                elif joint:
+                    self.elements[joint-1].param = 4
+                if joint:
+                    self.elements[joint-1].ant = old
+                self.old_T[-1] = self.Parameters(joint,self.old_T[-1], old)
+                
+                if_new = False
+                    
+                
+            for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
+                self.GetParameters(k[1:],self.old_T[-1], joint)
+                
+        del self.old_T[-1]
+
+    def SetParameters(self):
+        
+        for branch in self.branches[self.structure[0]:self.structure[1]+1]:
+            init = False
+            for joint in reversed(branch):
+                if joint==0 or not isinstance(self.elements[joint-1], Point):
+                    if not init:
+                        init = True
+                    elif (not joint == 0) and self.elements[old-1].param == 4:
+                        self.elements[joint-1].theta += self.elements[old-1].gamma
+                        self.elements[joint-1].r += self.elements[old-1].b
+                        self.elements[old-1].b = 0
+                        self.elements[old-1].gamma = 0
+                        
+                        print 'here'
+                    elif joint==0 and self.elements[old-1].param == 4:
+                        self.globFrame.theta += self.elements[old-1].gamma
+                        self.globFrame.r += self.elements[old-1].b
+                        self.elements[old-1].b = 0
+                        print self.globFrame.r
+                        self.elements[old-1].gamma = 0
+                    
+                    else:
+                        break
+                    old = joint
+                    
+        
+        
+##        for joint in branch:
+            
+
+##        if isinstance(self.elements[new_id-1], SuperRevoluteJoint):
+##            self.elements[new_id-1].r = 0.2
+##        elif isinstance(self.elements[new_id-1], SuperPrismaticJoint):
+##            self.elements[new_id-1].theta = 0
+                
+    def Parameters(self,  new_id,old_T, old_id):
+        
+        T = dot(inv(old_T),transpose(self.elements[new_id-1].T))
+
+        gamma = arctan2(-T[0,2],T[1,2])
+        alpha = arctan2(sin(gamma)*T[0,2]-cos(gamma)*T[1,2],T[2,2])
+        theta = arctan2(-cos(gamma)*T[0,1]-sin(gamma)*T[1,1],cos(gamma)*T[0,0]+sin(gamma)*T[1,0])
+        d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
+        
+        r = (T[0,3]-d*cos(gamma))/sin(gamma)/sin(alpha)
+        b =T[2,3]-r*cos(alpha)
+
+        if new_id:
+            element = self.elements[new_id-1]
+        else:
+            element = self.globFrame
+        element.gamma = gamma
+        element.alpha = alpha
+        element.theta = theta
+        element.d = d
+        element.r = r
+        element.b = b    
+
+        
+        new_T = [[cos(gamma)*cos(theta)-sin(gamma)*cos(alpha)*sin(theta),
+                  -cos(gamma)*sin(theta)-sin(gamma)*cos(alpha)*cos(theta),
+                  sin(gamma)*sin(alpha),
+                  d*cos(gamma)+r*sin(gamma)*sin(alpha)],
+                 [sin(gamma)*cos(theta)+cos(gamma)*cos(alpha)*sin(theta),
+                  -sin(gamma)*sin(theta)+cos(gamma)*cos(alpha)*cos(theta),
+                  -cos(gamma)*sin(alpha),
+                  d*sin(gamma)-r*cos(gamma)*sin(alpha)],
+                 [sin(alpha)*sin(theta),sin(alpha)*cos(theta),
+                  cos(alpha),r*cos(alpha)+b],
+                 [0,0,0,1]]
+
+        return old_T.dot(new_T)
+        
+    
     def Redraw(self):
         gl.glFlush()
         self.SwapBuffers()
@@ -885,7 +901,7 @@ class myGLCanvas(GLCanvas):
     def DrawElements(self, my_type, T=identity(4), pos=[0,0,0]):
         if my_type=='POINT':
             self.elements.append(Point(pos, self.my_id,0))
-            self.elements[-1].set_length(0.2)
+            self.elements[-1].set_length(0.3)
         else:   
             if my_type=='FIXED':
                 self.elements.append(SuperFixedJoint(0, my_id=self.my_id ,T=T))
@@ -894,26 +910,19 @@ class myGLCanvas(GLCanvas):
             elif my_type=='REVOLUTE':
                 self.elements.append(SuperRevoluteJoint(0, my_id=self.my_id, T=T))
             self.elements[-1].set_length(0.5)
-            self.elements[-1].show_frame = False
-            if not len(self.elements)==1:    
-                self.elements[-1].anc_pos.append(self.elements[-2].T[3,0:3])
-            else:
-                self.elements[-1].anc_pos.append([0,0,0])
-            self.links.append([self.my_id,len(self.elements)-1])
-            self.elements[-1].show_frame = True
         self.my_id += 1
+        
         if self.my_id > self.buffer_size:
-            if self.buffer_size*2 <  self.max_stack:
-                self.buffer_size *= 2
+            if self.buffer_size*4 <  self.max_stack:
+                self.buffer_size *= 4
             elif self.my_id <= self.max_stack:
                 self.buffer_size = self.max_stack
             else:
-                print 'maximum value of elements has been achived, cannot add more independent elements, element will be crated but they would not be choosable from window view'
-
+                msg = wx.MessageDialog (None, 'Maximu value of indepentend elements has been achived. New elements will not be pickble', style=wx.OK|wx.CENTRE)
+                msg.ShowModal()
     ##OpenGL handling
     def Pick(self):
         self.globFrame.named = False
-        
         for element in self.elements:
             element.named = False
             

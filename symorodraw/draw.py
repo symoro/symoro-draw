@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+5#!/usr/bin/env python
 # -*- coding: utf-8
 
 import wx
@@ -33,6 +33,7 @@ class MainFrame(wx.Frame):
                 self.grids = {}
                 self.check_boxes = {}
                 self.texts = {}
+                self.spins = {}
                 
                 self.menu_bars = {}
                 self.menus = {}
@@ -133,6 +134,9 @@ class MainFrame(wx.Frame):
                         self.CreateStaticSizer(key)
                 elif my_type == 'check_box':
                         self.CreateCheckBox(key)
+                elif my_type == 'float_spin':
+                        self.CreateFloatSpin(key)
+
 
                 my_list = self.data.GetTypedList('parent',key)
                 for name in my_list:    
@@ -171,6 +175,9 @@ class MainFrame(wx.Frame):
                                 
                         if self.data.GetValue(name,'w_type') == 'check_box':
                                 self.FillCheckBox(name)
+                                
+                        if self.data.GetValue(name,'w_type') == 'float_spin':
+                                self.FillFloatSpin(name)
 
         def CreateText(self, key):
                 text = self.data.GetWidget(key)
@@ -196,6 +203,7 @@ class MainFrame(wx.Frame):
         def CreateCheckBox(self, key):
                 check_box = self.data.GetWidget(key)
                 self.check_boxes[key] = wx.CheckBox(parent=self.panels[check_box['panel']], label=check_box['label'])
+                self.check_boxes[key].Bind(wx.EVT_CHECKBOX,getattr(self, check_box['callback']))
 
         def CreateSizer(self, key):
                 sizer = self.data.GetWidget(key)
@@ -216,6 +224,23 @@ class MainFrame(wx.Frame):
                                                                 ), orient=sizer['orientation'])
                 else:
                         self.static_sizers[key] = wx.StaticBoxSizer(wx.StaticBox(parent=self.panels[sizer['panel']], id=sizer['id'],), orient=sizer['orientation'])
+
+        def CreateFloatSpin(self, key):
+                spin = self.data.GetWidget(key)
+                if not self.data.CheckKey(key, 'size'):
+                        sizer['size'] = (70,-1)
+                if not self.data.CheckKey(key, 'increment'):
+                        sizer['increment'] = 0.5
+                if not self.data.CheckKey(key, 'min_val'):
+                        sizer['size'] = None
+                if not self.data.CheckKey(key, 'max_val'):
+                        sizer['increment'] = None
+                        
+                self.spins[key]=(FS.FloatSpin(self.panels[spin['panel']], size=spin['size'],
+                             increment=spin['increment'], min_val=spin['min_val'], max_val=spin['max_val']))
+                self.spins[key].Bind(FS.EVT_FLOATSPIN,  getattr(self, spin['callback']) )
+                self.spins[key].SetDigits(2)
+                        
 
         def FillButton(self, key):
                 button = self.data.GetWidget(key)
@@ -263,7 +288,7 @@ class MainFrame(wx.Frame):
                         if not self.data.CheckKey(key,'proportion'):
                                 sizer['proportion'] = 0
                         if not self.data.CheckKey(key,'border'):
-                                sizer['border'] = 1
+                                sizer['border'] = 0
                         if not self.data.CheckKey(key,'flag'):
                                 sizer['flag'] = wx.EXPAND
                         self.sizers[sizer['parent']].Add(self.static_sizers[key], proportion=sizer['proportion'], flag=sizer['flag'], border=sizer['border'])
@@ -305,12 +330,14 @@ class MainFrame(wx.Frame):
                         grid['border'] = 0
                 if not self.data.CheckKey(key,'flag'):
                         grid['flag'] =  wx.ALL
+                if self.data.GetValue(grid['parent'],'w_type')=='sizer':
+                        self.sizers[grid['parent']].Add(self.grids[key], proportion=grid['proportion'], flag=grid['flag'], border=grid['border'])
+                elif self.data.GetValue(grid['parent'],'w_type')=='static_sizer':
+                        self.static_sizers[grid['parent']].Add(self.grids[key], proportion=grid['proportion'], flag=grid['flag'], border=grid['border'])
 
-                self.sizers[grid['parent']].Add(self.grids[key], proportion=grid['proportion'], flag=grid['flag'], border=grid['border'])
-                 
         def FillStaticText(self, key):
                 text = self.data.GetWidget(key)
-                if self.data.getType(text['parent'],'w_type')=='grid':
+                if self.data.GetValue(text['parent'],'w_type')=='grid':
                         self.grids[text['parent']].Add(self.texts[key],(self.data.GetValue(key,'horizontal'),self.data.GetValue(key,'vertical')))
                 else:
                         if not self.data.CheckKey(key,'proportion'):
@@ -319,10 +346,26 @@ class MainFrame(wx.Frame):
                                 text['border'] = 0
                         if not self.data.CheckKey(key,'flag'):
                                 text['flag'] =  wx.ALIGN_LEFT
-                        if self.data.getType(text['parent'],'w_type')=='sizer':
+                        if self.data.GetValue(text['parent'],'w_type')=='sizer':
                                 self.sizers[text['parent']].Add(self.text[key], proportion=text['proportion'], flag=text['flag'], border=text['border'])
-                        elif self.data.getType(text['parent'],'w_type')=='static_sizer':
+                        elif self.data.GetValue(text['parent'],'w_type')=='static_sizer':
                                 self.static_sizers[text['parent']].Add(self.text[key], proportion=text['proportion'], flag=text['flag'], border=text['border'])
+
+        def FillFloatSpin(self, key):
+                spin = self.data.GetWidget(key)
+                if self.data.GetValue(spin['parent'],'w_type')=='grid':
+                        self.grids[spin['parent']].Add(self.spins[key],(self.data.GetValue(key,'horizontal'),self.data.GetValue(key,'vertical')))
+                else:
+                        if not self.data.CheckKey(key,'proportion'):
+                                spin['proportion'] = 0
+                        if not self.data.CheckKey(key,'border'):
+                                spin['border'] = 0
+                        if not self.data.CheckKey(key,'flag'):
+                                spin['flag'] =  wx.ALIGN_LEFT
+                        if self.data.GetValue(spin['parent'],'w_type')=='sizer':
+                                self.sizers[spin['parent']].Add(self.spins[key], proportion=spin['proportion'], flag=spin['flag'], border=spin['border'])
+                        elif self.data.GetValue(spin['parent'],'w_type')=='static_sizer':
+                                self.static_sizers[spin['parent']].Add(self.spins[key], proportion=spin['proportion'], flag=spin['flag'], border=spin['border'])
 
         def OnPlane1(self, event):
                 self.Init('PLANE1')
@@ -337,7 +380,20 @@ class MainFrame(wx.Frame):
                 pass
 		
         def OnExport(self, event):
-                pass
+                self.Export()
+                
+
+        def Export(self):
+                export = wx.TextEntryDialog(None, 'Give the name of the robot',  style=wx.SYSTEM_MENU|wx.OK|wx.CANCEL)
+                if export.ShowModal()==wx.ID_OK:
+                        name = export.GetValue()
+                        if name:
+                                self.canvas['CANVAS'].Export(export.GetValue())
+                        else:
+                                msg = wx.MessageDialog (None, 'Cannot export, please give the name of the robot.', style=wx.OK|wx.CENTRE)
+                                if msg.ShowModal()==wx.ID_OK:
+                                        self.Export()
+                
 		
         def OnClose(self, event):
                 pass
@@ -413,17 +469,79 @@ class MainFrame(wx.Frame):
                 self.Init('REM_ANC')
 
         def OnDefineD_H(self,event):
-                structures, branches = self.canvas['CANVAS'].DefineStructure()
-                print structures
-                print branches
-##                structures, branches = self.canvas['CANVAS'].GetAxises(structures, branches)
-##                self.canvas['CANVAS'].GetParameters(structures, branches)
+                self.canvas['CANVAS'].structure, self.canvas['CANVAS'].branches = self.canvas['CANVAS'].DefineStructure()
+                if self.canvas['CANVAS'].structure and self.canvas['CANVAS'].branches:
+                        joint = self.canvas['CANVAS'].structure[4][0]
+                        if joint:
+                                base = self.canvas['CANVAS'].elements[joint-1]
+                        else:
+                                base = self.canvas['CANVAS'].globFrame
+                        base.gamma = 0
+                        base.alpha = 0
+                        base.theta = 0
+                        base.d = 0
+                        base.r = 0
+                        base.b = 0
+                        self.canvas['CANVAS'].GetParameters(self.canvas['CANVAS'].branches[self.canvas['CANVAS'].structure[0]][1:],
+                                                            transpose(self.canvas['CANVAS'].elements[self.canvas['CANVAS'].structure[4][0]-1].T),
+                                                            self.canvas['CANVAS'].structure[4][0])
+                        self.canvas['CANVAS'].SetParameters()
+                        self.data.FlagSet('MODE',1)
 
         def OnStructure(self,event):
-                pass
+                self.data.FlagReset('MODE')
 
-        def OnChangeAxis(self, event):
-                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3] = self.canvas['CANVAS'].EulerTransformation(pi,[0,1,0]).dot(self.canvas['CANVAS'].elements[
+        def OnAlpha(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].alpha = event.EventObject.GetValue()
+                self.canvas['CANVAS'].OnDraw()
+                self.canvas['CANVAS'].Redraw()
+
+        def OnTheta(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].theta = event.EventObject.GetValue()
+                self.canvas['CANVAS'].OnDraw()
+                self.canvas['CANVAS'].Redraw()
+
+        def OnGamma(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].gamma = event.EventObject.GetValue()
+                self.canvas['CANVAS'].OnDraw()
+                self.canvas['CANVAS'].Redraw()
+
+        def OnD(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].d = event.EventObject.GetValue()
+                self.canvas['CANVAS'].OnDraw()
+                self.canvas['CANVAS'].Redraw()
+
+        def OnB(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].b = event.EventObject.GetValue()
+                self.canvas['CANVAS'].OnDraw()
+                self.canvas['CANVAS'].Redraw()
+
+        def OnR(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].r = event.EventObject.GetValue()
+                self.canvas['CANVAS'].OnDraw()
+                self.canvas['CANVAS'].Redraw()
+
+        def OnParallel(self, event):
+                self.Init('PARALLEL')
+
+        def OnPerpendicular(self, event):
+                 self.Init('PERPENDICULAR')
+
+        def OnAtDistance(self, event):
+                self.Init('AT_DISTANCE')
+
+        def OnAtAngle(self,event):
+                self.Init('AT_ANGLE')
+
+        def OnCut(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].cut_joint = event.EventObject.GetValue()
+
+        def OnActive(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].active = event.EventObject.GetValue()
+                
+
+        def OnChangeZAxis(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3] = self.canvas['CANVAS'].EulerTransformation(pi,[1,0,0]).dot(self.canvas['CANVAS'].elements[
                         self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3])
 
         def Init(self, f_id):
@@ -431,20 +549,38 @@ class MainFrame(wx.Frame):
                         self.data.FlagsChange('joint')
                         self.data.FlagsChange('ref')
                         self.data.FlagsChange('plane')
-                        self.data.FlagsChange('button')                        
+                        self.data.FlagsChange('button')
+                        self.data.FlagsChange('constraints')
                         self.data.FlagIncrement(f_id)
 
-        def ActiveJoint(self,active,cut,joint_id):
+        def ActiveJoint(self,joint_id):
+                if not joint_id == -2:
+                        joint = self.canvas['CANVAS'].elements[joint_id-1]
+                else:
+                        print 'id'
+                        joint = self.canvas['CANVAS'].globFrame
                 for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):
-                        self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue(key,'position'))
-                self.check_boxes['ON_ACTIVE'].SetValue(active)
-                self.check_boxes['ON_CUT_JOINT'].SetValue(cut)
+                        if not key=='ON_ANCESTORS':
+                                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue(key,'position'))
+                self.check_boxes['ON_ACTIVE'].SetValue(joint.active)
+                self.check_boxes['ON_CUT_JOINT'].SetValue(joint.cut_joint)
                 self.data.FlagSet('ACTIVE_JOINT',joint_id)
+                self.spins['ON_R'].SetValue(joint.r)
+                self.spins['ON_THETA'].SetValue(joint.theta)
+                self.spins['ON_D'].SetValue(joint.d)
+                self.spins['ON_ALPHA'].SetValue(joint.alpha)
+                self.spins['ON_B'].SetValue(joint.b)
+                self.spins['ON_GAMMA'].SetValue(joint.gamma)
 
-        def DeactiveJoint(self):
+        def ActiveLink(self, link_id):
+                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_ANCESTORS','position'))
+                self.data.FlagSet('ACTIVE_LINK',link_id)
+
+        def Deactive(self):
                 for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):
                         self.sizers['PANEL_JOINT_SIZER'].Hide(self.data.GetValue(key,'position'))
                 self.data.FlagReset('ACTIVE_JOINT')
+                self.data.FlagReset('ACTIVE_LINK')
 
 if __name__ == '__main__':
         app = wx.App(redirect = False)

@@ -252,7 +252,10 @@ class myGLCanvas(GLCanvas):
                     
 
     def DefineStructure(self):
-        
+        self.branches = []
+        self.structure = []
+        self.elements = [i for i in self.elements if not i.virtual_joint]
+        self.my_id = len(self.elements)+1
         branches = []
         links = self.links
         start = 0
@@ -291,6 +294,19 @@ class myGLCanvas(GLCanvas):
             key = self.FindKey(links, branches)
             branches.append([])
             branches[-1], links, used, joints, fixed, my_links= self.GetBranch(key, links, used, joints, fixed, cut_joints, my_links)
+
+        for branch in branches:
+            if  [i for i in cut_joints if i[1]==branch[-1] and [2]==branch[-2]]:
+                print 'cut', branch[-1], branch[-2]
+
+##                    if isinstance(self.elements[joint-1], SuperRevoluteJoint):
+##                        self.DrawElements(my_type='REVOLUTE', T=self.elements[joint-1].T)
+##                    else:
+##                        self.DrawElements(my_type='PRISMATIC', T=self.elements[joint-1].T)
+##                    self.elements[-1].show_frame = False
+##                    self.elements[-1].show_joint = False
+##                    joint = self.elements[-1].my_id
+##                    self.elements[-1].virtual_joint = True
 
         struct.append(len(branches)-2)
         struct.append(used)
@@ -358,23 +374,31 @@ class myGLCanvas(GLCanvas):
 
     def Activate(self, my_buffer):
         for min_d, max_d, name in my_buffer:
-            self.elements[name[0]-1].color_j=[1,0,0]
+    
             self.Deactivate()
             if len(name)>1:
-                self.parent.ActiveJoint(name[0])
-            elif name[0]==0:
-                self.parent.ActiveJoint(-2)
+                if name[0]:
+                    self.elements[name[0]-1].color_j=[1,0,0]
+                    self.parent.ActiveJoint(name[0], self.elements[name[0]-1].param)
+                elif name[0]==0:
+                    self.parent.ActiveJoint(-2, 0)
             else:
+                self.elements[name[0]-1].color_j=[1,0,0]
                 self.elements[name[0]-1].color_l=[1,0,0]
                 self.parent.ActiveLink(name[0])
             break
+        
 
     def Deactivate(self):
-        if self.parent.data.FlagGet('ACTIVE_JOINT'):
+        if self.parent.data.FlagGet('ACTIVE_JOINT')==-2:
+            self.globFrame.color_j=[0,0.6,0.5]
+        elif self.parent.data.FlagGet('ACTIVE_JOINT'):
             if isinstance(self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1],SuperRevoluteJoint):
                 self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].color_j=[1,1,0]
-            else:
+            elif isinstance(self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1],SuperPrismaticJoint):
                 self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].color_j=[1,0.6,0]
+            else:
+                self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].color_j=[0,0.6,0.5]
             
         elif self.parent.data.FlagGet('ACTIVE_LINK'):
             self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].color_j=[0,0.6,0.5]
@@ -383,13 +407,13 @@ class myGLCanvas(GLCanvas):
 
     def AddAncestor(self, my_buffer):
         for a, b, name in my_buffer:
-            if not isinstance(self.elements[name[0]-1],Point) or not name[0]:
+            if not name[0] or not isinstance(self.elements[name[0]-1],Point):
                 if not [self.parent.data.FlagGet('ACTIVE_LINK'),name[0]] in self.links:
                     if len([i for i in self.links if i[1]==name[0]])<2:
                         self.links.append([self.parent.data.FlagGet('ACTIVE_LINK'),name[0]])
                         if not name[0] and not [i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if all(i==[0,0,0])]:
                             self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos.append([0,0,0])
-                        elif not [i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if all(i== self.elements[name[0]-1].T[3,0:3])]:
+                        elif name[0]  and not [i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if all(i== self.elements[name[0]-1].T[3,0:3])]:
                             self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos.append(self.elements[name[0]-1].T[3,0:3])
                 
         
@@ -398,7 +422,7 @@ class myGLCanvas(GLCanvas):
 
     def RemAncestor(self, my_buffer):
         for a, b, name in my_buffer:
-            if not isinstance(self.elements[name[0]-1],Point):
+            if not isinstance(self.elements[name[0]-1],Point) or not name[0]:
                 self.links=[i for i in self.links if not i==[self.parent.data.FlagGet('ACTIVE_LINK'),name[0]]]
 
                 if name[0]:
@@ -417,7 +441,7 @@ class myGLCanvas(GLCanvas):
                     if self.parent.data.FlagGet(flag)==1:
                         self.plane.append(name[0])
                         self.parent.data.FlagIncrement(flag)
-                    elif not (name[0] in self.plane):
+                    elif not (name[0] in self.plane) and name[0]:
                         if not self.plane[0]:
                             axis = self.globFrame
                         else:
@@ -438,6 +462,9 @@ class myGLCanvas(GLCanvas):
                                 u /= norm(u)
                                 self.elements[name[0]-1].T[3,0:3]=add(axis.T[3,0:3],multiply(u,val))
 
+                        del self.plane[:]
+                        self.parent.data.FlagReset(flag)
+                    elif not name[0]:
                         del self.plane[:]
                         self.parent.data.FlagReset(flag)
                     break
@@ -787,35 +814,26 @@ class myGLCanvas(GLCanvas):
         old = s_joint
         print 'old', old
         self.old_T.append(start)
-        if_new = True
+        br = 0
         
         for joint in branch:
             if joint==0 or not isinstance(self.elements[joint-1], Point):
-                if [i for i in self.structure[5] if i[1]==old and i[2]==joint]:
-                    if isinstance(self.elements[joint-1], SuperRevoluteJoint):
-                        self.DrawElements(my_type='REVOLUTE', T=self.elements[joint-1])
-                    else:
-                        self.DrawElements(my_type='PRISMATIC', T=self.elements[joint-1])
-                    self.elements[-1].show_frame = False
-                    self.elements[-1].show_joint = False
-                    joint = self.elements[-1].my_id
-                    self.elements[-1].virtual_joint = True
-                    
-                if if_new and not self.branches[self.structure[0]][2]:
-                    if joint:
-                        self.elements[joint-1].param = 6
+                if not br and not (branch == self.branches[self.structure[0]][1:]):
+                    self.elements[joint-1].param = 6
                 elif joint:
                     self.elements[joint-1].param = 4
                 if joint:
                     self.elements[joint-1].ant = old
-                self.old_T[-1] = self.Parameters(joint,self.old_T[-1], old)
-                
-                if_new = False
-                    
+                self.old_T[-1] = self.Parameters(joint,self.old_T[-1])
+                old = joint
+                if joint == self.branches[self.structure[0]][2]:
+                    if not self.elements[joint-1].gamma==0 and not self.elements[joint-1].b==0:
+                        self.elements[joint-1].param = 6
                 
             for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
                 self.GetParameters(k[1:],self.old_T[-1], joint)
-                
+            br += 1
+            
         del self.old_T[-1]
 
     def SetParameters(self):
@@ -823,7 +841,7 @@ class myGLCanvas(GLCanvas):
         for branch in self.branches[self.structure[0]:self.structure[1]+1]:
             init = False
             for joint in reversed(branch):
-                if joint==0 or not isinstance(self.elements[joint-1], Point):
+                if (joint==0 or not isinstance(self.elements[joint-1], Point)) and not joint == self.branches[self.structure[0]][2] :
                     if not init:
                         init = True
                     elif (not joint == 0) and self.elements[old-1].param == 4:
@@ -831,30 +849,19 @@ class myGLCanvas(GLCanvas):
                         self.elements[joint-1].r += self.elements[old-1].b
                         self.elements[old-1].b = 0
                         self.elements[old-1].gamma = 0
-                        
-                        print 'here'
-                    elif joint==0 and self.elements[old-1].param == 4:
-                        self.globFrame.theta += self.elements[old-1].gamma
-                        self.globFrame.r += self.elements[old-1].b
-                        self.elements[old-1].b = 0
-                        print self.globFrame.r
-                        self.elements[old-1].gamma = 0
                     
                     else:
                         break
                     old = joint
                     
-        
-        
-##        for joint in branch:
-            
-
-##        if isinstance(self.elements[new_id-1], SuperRevoluteJoint):
-##            self.elements[new_id-1].r = 0.2
-##        elif isinstance(self.elements[new_id-1], SuperPrismaticJoint):
-##            self.elements[new_id-1].theta = 0
+##        for branch in self.branches[self.structure[0]:self.structure[1]+1]:
+##            for joint in branch:
+##                if isinstance(self.elements[joint-1], SuperRevoluteJoint):
+##                    self.elements[joint-1].theta = 0
+##                if isinstance(self.elements[joint-1], SuperPrismaticJoint):
+##                    self.elements[joint-1].r = 0.2    
                 
-    def Parameters(self,  new_id,old_T, old_id):
+    def Parameters(self,  new_id,old_T):
         
         T = dot(inv(old_T),transpose(self.elements[new_id-1].T))
 
@@ -862,8 +869,14 @@ class myGLCanvas(GLCanvas):
         alpha = arctan2(sin(gamma)*T[0,2]-cos(gamma)*T[1,2],T[2,2])
         theta = arctan2(-cos(gamma)*T[0,1]-sin(gamma)*T[1,1],cos(gamma)*T[0,0]+sin(gamma)*T[1,0])
         d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
-        
-        r = (T[0,3]-d*cos(gamma))/sin(gamma)/sin(alpha)
+
+        if not sin(alpha):
+            r = T[2,3]
+        elif not sin(gamma):
+            r = T[0,3]/sin(alpha)
+        else:
+            r = (T[0,3]-d*cos(gamma))/sin(gamma)/sin(alpha)
+            
         b =T[2,3]-r*cos(alpha)
 
         if new_id:

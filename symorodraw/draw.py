@@ -145,6 +145,7 @@ class MainFrame(wx.Frame):
         def FillSizers(self, key):
                 print key
                 if not self.data.GetValue(key, 'w_type') == 'grid':
+                        print key, 'kry'
                         my_list = self.data.SortPosition(key)
                 else:
                         my_list = self.data.GetTypedList('parent',key)
@@ -299,6 +300,17 @@ class MainFrame(wx.Frame):
                         self.panels[sizer['parent']].SetSizerAndFit(self.sizers[key])
                 elif self.data.GetValue(sizer['parent'],'w_type') =='grid':
                         self.grids[sizer['parent']].Add(self.sizers[key], pos=( sizer['vertical'],sizer['horizontal']))
+                else:
+                        if not self.data.CheckKey(key,'proportion'):
+                                sizer['proportion'] = 0
+                        if not self.data.CheckKey(key,'border'):
+                                sizer['border'] = 0
+                        if not self.data.CheckKey(key,'flag'):
+                                sizer['flag'] = wx.EXPAND
+                        if self.data.GetValue(sizer['parent'],'w_type') =='sizer':
+                                self.sizers[sizer['parent']].Add(self.static[key], proportion=sizer['proportion'], flag=sizer['flag'], border=sizer['border'])
+                        elif self.data.GetValue(sizer['parent'],'w_type') =='static_sizer':
+                                self.static_sizers[sizer['parent']].Add(self.sizers[key], proportion=sizer['proportion'], flag=sizer['flag'], border=sizer['border'])
                         
         def FillCanvas(self, key):
                 canvas = self.data.GetWidget(key)
@@ -347,9 +359,9 @@ class MainFrame(wx.Frame):
                         if not self.data.CheckKey(key,'flag'):
                                 text['flag'] =  wx.ALIGN_LEFT
                         if self.data.GetValue(text['parent'],'w_type')=='sizer':
-                                self.sizers[text['parent']].Add(self.text[key], proportion=text['proportion'], flag=text['flag'], border=text['border'])
+                                self.sizers[text['parent']].Add(self.texts[key], proportion=text['proportion'], flag=text['flag'], border=text['border'])
                         elif self.data.GetValue(text['parent'],'w_type')=='static_sizer':
-                                self.static_sizers[text['parent']].Add(self.text[key], proportion=text['proportion'], flag=text['flag'], border=text['border'])
+                                self.static_sizers[text['parent']].Add(self.texts[key], proportion=text['proportion'], flag=text['flag'], border=text['border'])
 
         def FillFloatSpin(self, key):
                 spin = self.data.GetWidget(key)
@@ -476,12 +488,6 @@ class MainFrame(wx.Frame):
                                 base = self.canvas['CANVAS'].elements[joint-1]
                         else:
                                 base = self.canvas['CANVAS'].globFrame
-                        base.gamma = 0
-                        base.alpha = 0
-                        base.theta = 0
-                        base.d = 0
-                        base.r = 0
-                        base.b = 0
                         self.canvas['CANVAS'].GetParameters(self.canvas['CANVAS'].branches[self.canvas['CANVAS'].structure[0]][1:],
                                                             transpose(self.canvas['CANVAS'].elements[self.canvas['CANVAS'].structure[4][0]-1].T),
                                                             self.canvas['CANVAS'].structure[4][0])
@@ -553,15 +559,40 @@ class MainFrame(wx.Frame):
                         self.data.FlagsChange('constraints')
                         self.data.FlagIncrement(f_id)
 
-        def ActiveJoint(self,joint_id):
+        def ActiveJoint(self,joint_id, j_type):
                 if not joint_id == -2:
                         joint = self.canvas['CANVAS'].elements[joint_id-1]
                 else:
                         print 'id'
                         joint = self.canvas['CANVAS'].globFrame
-                for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):
-                        if not key=='ON_ANCESTORS':
-                                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue(key,'position'))
+                        
+                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_CUT_JOINT','position'))
+                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_ACTIVE','position'))
+                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_CHANGE_DIR','position'))
+                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_PARAMETERS','position'))
+                if not j_type or self.canvas['CANVAS'].elements[joint_id-1].virtual_joint:
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_B','position'))
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_THETA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_D','position'))
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_R','position'))
+                if j_type == 4:
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_B','position'))
+                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_THETA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_D','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_R','position'))
+                elif j_type == 6:
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_B','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_THETA','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_D','position'))
+                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_R','position'))                       
+                       
+                
                 self.check_boxes['ON_ACTIVE'].SetValue(joint.active)
                 self.check_boxes['ON_CUT_JOINT'].SetValue(joint.cut_joint)
                 self.data.FlagSet('ACTIVE_JOINT',joint_id)

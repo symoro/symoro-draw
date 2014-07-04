@@ -232,144 +232,163 @@ class data():
                                      'parent':'PANEL_JOINT_SIZER',
                                      'position':4,
                                      'active':False,
-                                     'orientation':wx.VERTICAL
-                                    }
-        self.widgets['GRID_JOINT'] = {'w_type':'grid',
-                                'parent':'ON_PARAMETERS',
-                                'position':4,
-                                'horizontal':2,
-                                'vertical':10,
-                                'border':5,
-                                'flag':wx.RIGHT
-                                    }
-
-        self.widgets['TEXT_ALPHA'] = {'w_type':'static_text',
-                                           'label':'al',
-                                     'parent':'GRID_JOINT',
-                                     'horizontal':3,
-                                     'vertical':0,
-                                    'panel':'PANEL_SIDE',
-                                     'active':True,
-                                      'size':(20,-1)
+                                     'orientation':wx.VERTICAL,
+                                    'flag':wx.RIGHT
                                     }
         
-        self.widgets['ON_ALPHA'] = {'w_type':'float_spin',
-                                 'parent':'GRID_JOINT',
-                                 'panel':'PANEL_SIDE',
-                                 'callback':'OnAlpha',
-                                 'position':0,
-                                 'vertical':1,
-                                 'horizontal':3,
-                                 'min_val':None,
-                                 'max_val':None,
-                                 'increment':0.01,
-                                 'size':(60,-1)
-                                 }
+        self.widgets['ON_PARAM_S_D'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_PARAMETERS',
+                                     'position':2,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
         self.widgets['TEXT_D'] = {'w_type':'static_text',
                                            'label':'d',
-                                     'parent':'GRID_JOINT',
-                                     'horizontal':2,
-                                     'vertical':0,
+                                     'parent':'ON_PARAM_S_D',
+                                     'position':0,
                                     'panel':'PANEL_SIDE',
                                      'active':True,
                                   'size':(20,-1)
                                     }
         
         self.widgets['ON_D'] = {'w_type':'float_spin',
-                                 'parent':'GRID_JOINT',
+                                 'parent':'ON_PARAM_S_D',
                                  'panel':'PANEL_SIDE',
                                  'callback':'OnD',
-                                 'position':0,
-                                 'vertical':1,
-                                 'horizontal':2,
+                                 'position':1,
                                  'min_val':None,
                                  'max_val':None,
                                  'increment':0.01,
                                  'size':(60,-1)
                                  }
+        self.widgets['ON_PARAM_S_ALPHA'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_PARAMETERS',
+                                     'position':3,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
+        self.widgets['TEXT_ALPHA'] = {'w_type':'static_text',
+                                           'label':'al',
+                                     'parent':'ON_PARAM_S_ALPHA',
+                                     'position':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':False,
+                                      'size':(20,-1)
+                                    }
+        
+        self.widgets['ON_ALPHA'] = {'w_type':'float_spin',
+                                 'parent':'ON_PARAM_S_ALPHA',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnAlpha',
+                                 'position':1,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        
+        self.widgets['ON_PARAM_S_THETA'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_PARAMETERS',
+                                     'position':5,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
         self.widgets['TEXT_THETA'] = {'w_type':'static_text',
                                            'label':'th',
-                                     'parent':'GRID_JOINT',
-                                     'horizontal':5,
-                                     'vertical':0,
+                                     'parent':'ON_PARAM_S_THETA',
+                                     'position':0,
                                     'panel':'PANEL_SIDE',
                                      'active':True,
                                       'size':(20,-1)
                                     }
         
         self.widgets['ON_THETA'] = {'w_type':'float_spin',
-                                 'parent':'GRID_JOINT',
+                                 'parent':'ON_PARAM_S_THETA',
                                  'panel':'PANEL_SIDE',
                                  'callback':'OnTheta',
-                                 'position':0,
-                                 'vertical':1,
-                                 'horizontal':5,
+                                 'position':1,
                                  'min_val':None,
                                  'max_val':None,
                                  'increment':0.01,
                                  'size':(60,-1)
                                  }
+        
+        self.widgets['ON_PARAM_S_R'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_PARAMETERS',
+                                     'position':4,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
         self.widgets['TEXT_R'] = {'w_type':'static_text',
                                            'label':'r',
-                                     'parent':'GRID_JOINT',
-                                     'horizontal':4,
-                                     'vertical':0,
+                                     'parent':'ON_PARAM_S_R',
+                                     'position':0,
                                     'panel':'PANEL_SIDE',
                                      'active':True,
                                   'size':(20,-1)
                                     }
-        
         self.widgets['ON_R'] = {'w_type':'float_spin',
-                                 'parent':'GRID_JOINT',
+                                 'parent':'ON_PARAM_S_R',
                                  'panel':'PANEL_SIDE',
                                  'callback':'OnR',
-                                 'position':0,
-                                 'vertical':1,
-                                 'horizontal':4,
+                                 'position':1,
                                  'min_val':None,
                                  'max_val':None,
                                  'increment':0.01,
                                  'size':(60,-1)
                                  }
+        self.widgets['ON_PARAM_S_GAMMA'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_PARAMETERS',
+                                     'position':1,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
         self.widgets['TEXT_GAMMA'] = {'w_type':'static_text',
                                            'label':'g',
-                                     'parent':'GRID_JOINT',
-                                     'horizontal':1,
-                                     'vertical':0,
+                                     'parent':'ON_PARAM_S_GAMMA',
+                                     'position':0,
                                     'panel':'PANEL_SIDE',
                                      'active':True,
                                       'size':(20,-1)
                                     }
         
         self.widgets['ON_GAMMA'] = {'w_type':'float_spin',
-                                 'parent':'GRID_JOINT',
+                                 'parent':'ON_PARAM_S_GAMMA',
                                  'panel':'PANEL_SIDE',
                                  'callback':'OnGamma',
-                                 'position':0,
-                                 'vertical':1,
-                                 'horizontal':1,
+                                 'position':1,
                                  'min_val':None,
                                  'max_val':None,
                                  'increment':0.01,
                                  'size':(60,-1)
                                  }
+        self.widgets['ON_PARAM_S_B'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_PARAMETERS',
+                                     'position':0,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
+        
         self.widgets['TEXT_B'] = {'w_type':'static_text',
                                            'label':'b',
-                                     'parent':'GRID_JOINT',
-                                     'horizontal':0,
-                                     'vertical':0,
+                                     'parent':'ON_PARAM_S_B',
+                                     'position':0,
                                     'panel':'PANEL_SIDE',
                                      'active':True,
                                   'size':(20,-1)
                                     }
         
         self.widgets['ON_B'] = {'w_type':'float_spin',
-                                 'parent':'GRID_JOINT',
+                                 'parent':'ON_PARAM_S_B',
                                  'panel':'PANEL_SIDE',
                                  'callback':'OnB',
-                                 'position':0,
-                                 'vertical':1,
-                                 'horizontal':0,
+                                 'position':1,
                                  'min_val':None,
                                  'max_val':None,
                                  'increment':0.01,
@@ -421,18 +440,6 @@ class data():
                                     'callback':'OnStructure',
                                     'active':True
                                     }
-        
-
-
-
-##        self.widgets['TEXT_REFERENCES'] = {'w_type':'static_text',
-##                                           'label':'References',
-##                                     'parent':'GRID',
-##                                     'horizontal':4,
-##                                     'vertical':0,
-##                                    'panel':'PANEL',
-##                                     'active':True
-##                                    }
                                      
         #MENU
         self.widgets['MENU_BAR'] = {'w_type':'menu_bar',
@@ -539,25 +546,6 @@ class data():
                                 'position':1,
                                 'callback':'OnRefPoint'
                                 }
-##        #Toolbars
-##        self.widgets['TOOLBARS'] = {'w_type':'menu',
-##                                'parent':'MENU_BAR',
-##                                'label':'Toolbars',
-##                                'position':3,
-##                                'submenu':False
-##                                    }
-##        self.widgets['T_DRAW'] = {'w_type':'menu_item',
-##                                'parent':'TOOLBARS',
-##                                'label':'Draw',
-##                                'position':0,
-##                                'callback':'OnShowDraw'
-##                                    }
-##        self.widgets['T_VIEW'] = {'w_type':'menu_item',
-##                                'parent':'TOOLBARS',
-##                                'label':'View',
-##                                'position':1,
-##                                'callback':'OnShowView'
-##                                    }
         #View
         self.widgets['VIEW'] = {'w_type':'menu',
                                 'parent':'MENU_BAR',
@@ -612,30 +600,6 @@ class data():
                                 'position':6,
                                 'callback':'OnIsometric'
                                 }
-##        self.widgets['SEP1'] = {'w_type':'menu_separator',
-##                                'parent':'VIEW',
-##                                'position':7
-##                                }
-        
-##        self.widgets['ZOOM'] = {'w_type':'menu_item',
-##                                'parent':'VIEW',
-##                                'label':'Zoom',
-##                                'position':8,
-##                                'callback':'OnZoom'
-##                                }
-##        
-##        self.widgets['PAN'] = {'w_type':'menu_item',
-##                                'parent':'VIEW',
-##                                'label':'Pan',
-##                                'position':9,
-##                                'callback':'OnPan'
-##                                }
-##        self.widgets['ROTATE'] = {'w_type':'menu_item',
-##                                'parent':'VIEW',
-##                                'label':'Rotate',
-##                                'position':10,
-##                                'callback':'OnRotate'
-##                                }
 
 ##      Flags data
 

@@ -69,7 +69,6 @@ class myGLCanvas(GLCanvas):
         self.links = []
         self.branches = []
         self.d_init = False
-        self.old_T = []
 
 
     def assign_mono_scale(self):
@@ -810,68 +809,85 @@ class myGLCanvas(GLCanvas):
                 
         gl.glPopMatrix()
 
-    def GetParameters(self, branch, start, s_joint):
-        old = s_joint
+    def GetParameters(self, branch, start_T, start_joint):
+        old = start_joint
         print 'old', old
-        self.old_T.append(start)
-        br = 0
-        
+        old_T = start_T
+        init = False
+        next_branch = []
         for joint in branch:
             if joint==0 or not isinstance(self.elements[joint-1], Point):
-                if not br and not (branch == self.branches[self.structure[0]][1:]):
+                if not init and not (branch == self.branches[self.structure[0]][1:]):
                     self.elements[joint-1].param = 6
                 elif joint:
                     self.elements[joint-1].param = 4
                 if joint:
                     self.elements[joint-1].ant = old
-                self.old_T[-1] = self.Parameters(joint,self.old_T[-1])
+                old_T = self.Parameters(joint,old_T)
                 old = joint
                 if joint == self.branches[self.structure[0]][2]:
-                    if not self.elements[joint-1].gamma==0 and not self.elements[joint-1].b==0:
+                    if not (self.elements[joint-1].gamma==0 and self.elements[joint-1].b==0):
                         self.elements[joint-1].param = 6
                 
             for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
-                self.GetParameters(k[1:],self.old_T[-1], joint)
-            br += 1
+                next_branch.append([k[1:],[],old])
+            init = True
             
-        del self.old_T[-1]
+        return next_branch        
 
-    def SetParameters(self):
+    def SetParameters(self, branch):
         
-        for branch in self.branches[self.structure[0]:self.structure[1]+1]:
-            init = False
-            for joint in reversed(branch):
-                if (joint==0 or not isinstance(self.elements[joint-1], Point)) and not joint == self.branches[self.structure[0]][2] :
-                    if not init:
-                        init = True
-                    elif (not joint == 0) and self.elements[old-1].param == 4:
-                        self.elements[joint-1].theta += self.elements[old-1].gamma
-                        self.elements[joint-1].r += self.elements[old-1].b
-                        self.elements[old-1].b = 0
-                        self.elements[old-1].gamma = 0
+        init = False
+        for joint in reversed(branch):
+            if (joint==0 or not isinstance(self.elements[joint-1], Point)) and (not init or not joint == self.branches[self.structure[0]][1]) :
+                if not init:
+                    init = True
+                elif (not joint == 0) and self.elements[old-1].param == 4:
+                    self.elements[joint-1].theta += self.elements[old-1].gamma
+                    self.elements[joint-1].r += self.elements[old-1].b
+                    self.elements[old-1].b = 0
+                    self.elements[old-1].gamma = 0
                     
-                    else:
-                        break
-                    old = joint
+                else:
+                    break
+                old = joint
                     
 ##        for branch in self.branches[self.structure[0]:self.structure[1]+1]:
 ##            for joint in branch:
 ##                if isinstance(self.elements[joint-1], SuperRevoluteJoint):
 ##                    self.elements[joint-1].theta = 0
 ##                if isinstance(self.elements[joint-1], SuperPrismaticJoint):
-##                    self.elements[joint-1].r = 0.2    
+##                    self.elements[joint-1].r = 0.2
+
+    def GetTransforms(self, branch, old_T, next_branch):
+        new_T = old_T
+        for joint in branch:
+            if (joint==0 or not isinstance(self.elements[joint-1], Point)):
+                T = self.GetT(self.elements[joint-1].gamma, self.elements[joint-1].b,
+                              self.elements[joint-1].alpha, self.elements[joint-1].d,
+                              self.elements[joint-1].theta, self.elements[joint-1].r)
+                new_T = new_T.dot(T)
+                
+            for check in next_branch:
+                if joint == check[2]:
+                    check[1]=new_T
+
+        return next_branch
+            
                 
     def Parameters(self,  new_id,old_T):
         
         T = dot(inv(old_T),transpose(self.elements[new_id-1].T))
-
-        gamma = arctan2(-T[0,2],T[1,2])
+        if abs(T[0,2])<0.02 and abs(T[1,2])<0.02:
+            gamma = 0
+        else:
+            gamma = arctan2(-T[0,2],T[1,2])
         alpha = arctan2(sin(gamma)*T[0,2]-cos(gamma)*T[1,2],T[2,2])
         theta = arctan2(-cos(gamma)*T[0,1]-sin(gamma)*T[1,1],cos(gamma)*T[0,0]+sin(gamma)*T[1,0])
         d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
 
         if not sin(alpha):
-            r = T[2,3]
+            r = 0
         elif not sin(gamma):
             r = T[0,3]/sin(alpha)
         else:
@@ -890,7 +906,12 @@ class myGLCanvas(GLCanvas):
         element.r = r
         element.b = b    
 
+        new_T = self.GetT( gamma, b, alpha, d, theta, r)
         
+
+        return old_T.dot(new_T)
+
+    def GetT(self, gamma, b, alpha, d, theta, r):
         new_T = [[cos(gamma)*cos(theta)-sin(gamma)*cos(alpha)*sin(theta),
                   -cos(gamma)*sin(theta)-sin(gamma)*cos(alpha)*cos(theta),
                   sin(gamma)*sin(alpha),
@@ -902,8 +923,7 @@ class myGLCanvas(GLCanvas):
                  [sin(alpha)*sin(theta),sin(alpha)*cos(theta),
                   cos(alpha),r*cos(alpha)+b],
                  [0,0,0,1]]
-
-        return old_T.dot(new_T)
+        return new_T
         
     
     def Redraw(self):

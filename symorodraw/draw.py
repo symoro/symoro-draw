@@ -483,15 +483,17 @@ class MainFrame(wx.Frame):
         def OnDefineD_H(self,event):
                 self.canvas['CANVAS'].structure, self.canvas['CANVAS'].branches = self.canvas['CANVAS'].DefineStructure()
                 if self.canvas['CANVAS'].structure and self.canvas['CANVAS'].branches:
-                        joint = self.canvas['CANVAS'].structure[4][0]
-                        if joint:
-                                base = self.canvas['CANVAS'].elements[joint-1]
-                        else:
-                                base = self.canvas['CANVAS'].globFrame
-                        self.canvas['CANVAS'].GetParameters(self.canvas['CANVAS'].branches[self.canvas['CANVAS'].structure[0]][1:],
+                        next_branch = [[self.canvas['CANVAS'].branches[self.canvas['CANVAS'].structure[0]][1:],
                                                             transpose(self.canvas['CANVAS'].elements[self.canvas['CANVAS'].structure[4][0]-1].T),
-                                                            self.canvas['CANVAS'].structure[4][0])
-                        self.canvas['CANVAS'].SetParameters()
+                                                            self.canvas['CANVAS'].structure[4][0]]]
+                        while next_branch:
+                                new_branch = self.canvas['CANVAS'].GetParameters(next_branch[0][0],next_branch[0][1],next_branch[0][2])
+                                print 'next_branch1', next_branch
+                                self.canvas['CANVAS'].SetParameters(next_branch[0][0])
+                                print 'next_branch2', next_branch
+                                next_branch += self.canvas['CANVAS'].GetTransforms(next_branch[0][0],next_branch[0][1], new_branch)
+                                del next_branch[0]
+                                
                         self.data.FlagSet('MODE',1)
 
         def OnStructure(self,event):

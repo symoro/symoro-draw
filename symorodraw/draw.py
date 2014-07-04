@@ -487,12 +487,13 @@ class MainFrame(wx.Frame):
                                                             transpose(self.canvas['CANVAS'].elements[self.canvas['CANVAS'].structure[4][0]-1].T),
                                                             self.canvas['CANVAS'].structure[4][0]]]
                         while next_branch:
+                                next_branch += self.canvas['CANVAS'].GetParameters(next_branch[0][0],next_branch[0][1],next_branch[0][2])
+
                                 new_branch = self.canvas['CANVAS'].GetParameters(next_branch[0][0],next_branch[0][1],next_branch[0][2])
-                                print 'next_branch1', next_branch
                                 self.canvas['CANVAS'].SetParameters(next_branch[0][0])
-                                print 'next_branch2', next_branch
                                 next_branch += self.canvas['CANVAS'].GetTransforms(next_branch[0][0],next_branch[0][1], new_branch)
                                 del next_branch[0]
+##                        self.canvas['CANVAS'].SetConfiguration()
                                 
                         self.data.FlagSet('MODE',1)
 

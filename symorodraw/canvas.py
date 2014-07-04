@@ -251,10 +251,15 @@ class myGLCanvas(GLCanvas):
                     
 
     def DefineStructure(self):
-        self.branches = []
-        self.structure = []
-        self.elements = [i for i in self.elements if not i.virtual_joint]
-        self.my_id = len(self.elements)+1
+
+        to_delete = [i.my_id for i in self.elements if i.virtual_joint]
+       
+        for i in reversed(to_delete):
+            self.Delete([i])
+            print 'here'
+
+##        self.branches = []
+##        self.struct = []
         branches = []
         links = self.links
         start = 0
@@ -295,17 +300,30 @@ class myGLCanvas(GLCanvas):
             branches[-1], links, used, joints, fixed, my_links= self.GetBranch(key, links, used, joints, fixed, cut_joints, my_links)
 
         for branch in branches:
-            if  [i for i in cut_joints if i[1]==branch[-1] and [2]==branch[-2]]:
-                print 'cut', branch[-1], branch[-2]
+            
+            if len(branch)>1 and [i for i in cut_joints if i[1]==branch[-1] and i[2]==branch[-2]]:
 
-##                    if isinstance(self.elements[joint-1], SuperRevoluteJoint):
-##                        self.DrawElements(my_type='REVOLUTE', T=self.elements[joint-1].T)
-##                    else:
-##                        self.DrawElements(my_type='PRISMATIC', T=self.elements[joint-1].T)
-##                    self.elements[-1].show_frame = False
-##                    self.elements[-1].show_joint = False
-##                    joint = self.elements[-1].my_id
-##                    self.elements[-1].virtual_joint = True
+                if isinstance(self.elements[branch[-1]-1], SuperRevoluteJoint):
+                    self.DrawElements(my_type='REVOLUTE', T=self.elements[branch[-1]-1].T)
+                else:
+                    self.DrawElements(my_type='PRISMATIC', T=self.elements[branch[-1]-1].T)
+                self.elements[-1].show_frame = False
+                self.elements[-1].show_joint = False
+                branch[-1] = self.elements[-1].my_id
+                self.elements[-1].virtual_joint = True
+                self.DrawElements(my_type='POINT', T=self.elements[branch[-1]-1].T)
+                self.elements[-1].show_frame = False
+                self.elements[-1].show_joint = False
+                branch.append(self.elements[-1].my_id)
+                self.elements[-1].virtual_joint = True
+
+            if len(branch)>1 and [i for i in cut_joints if i[1]==branch[-1] and i[0]==branch[-2]]:
+                self.DrawElements(my_type='POINT', T=self.elements[branch[-1]-1].T)
+                self.elements[-1].show_frame = False
+                self.elements[-1].show_joint = False
+                branch.append(self.elements[-1].my_id)
+                self.elements[-1].virtual_joint = True
+                
 
         struct.append(len(branches)-2)
         struct.append(used)
@@ -313,6 +331,8 @@ class myGLCanvas(GLCanvas):
         struct.append(fixed)
         struct.append(cut_joints)
         struct.append(my_links)
+        print 'struct', struct
+        print 'branches', branches
         return struct, branches
 
     def FindKey(self, links, branches):
@@ -468,28 +488,33 @@ class myGLCanvas(GLCanvas):
                         self.parent.data.FlagReset(flag)
                     break
                         
-
+    def Delete(self,name):
+        print 'del'
+        if name and name[0]:
+            if len(name)>1:
+                for l in [i for i in self.links if i[1]==name[0]]:
+                    self.elements[l[0]-1].anc_pos = [i for i in self.elements[l[0]-1].anc_pos if not all(i==self.elements[name[0]-1].T[3,0:3])]   
+                self.links = [i for i in self.links if not i[1]==name[0]]
+            else:
+                self.links = [i for i in self.links if not i[0]==name[0]]
+                
+            for i in self.links:
+                if i[0]>name[0]:
+                    i[0] -= 1
+                if i[1]>name[0]:
+                    i[1] -= 1
+                                         
+            for element in self.elements[name[0]-1:]:
+                element.my_id -= 1
+            del self.elements[name[0]-1]
+            self.my_id -= 1
+            self.parent.data.FlagReset('DELETE')
+            return True
+                
     def OnDelete(self, my_buffer):
         for a, b, name in my_buffer:
-            if name and name[0]:
-                if len(name)>1:
-                    for l in [i for i in self.links if i[1]==name[0]]:
-                        self.elements[l[0]-1].anc_pos = [i for i in self.elements[l[0]-1].anc_pos if not all(i==self.elements[name[0]-1].T[3,0:3])]   
-                    self.links = [i for i in self.links if not i[1]==name[0]]
-                else:
-                    self.links = [i for i in self.links if not i[0]==name[0]]                
-
-                for i in self.links:
-                    if i[0]>name[0]:
-                        i[0] -= 1
-                    if i[1]>name[0]:
-                        i[1] -= 1
-                                         
-                for element in self.elements[name[0]-1:]:
-                    element.my_id -= 1
-                del self.elements[name[0]-1]
-                self.my_id -= 1
-                self.parent.data.FlagReset('DELETE')
+            check = self.Delete(name)
+            if check:
                 break
                 
     def DefinePlane(self, my_buffer):
@@ -522,7 +547,6 @@ class myGLCanvas(GLCanvas):
     def InitPlane3(self):
         points = []
         for i in range(0,3):
-            print self.plane[i][0]-1
             if isinstance(self.elements[self.plane[i][0]-1], Point):
                 points.append(self.elements[self.plane[i][0]-1].pos)
             else:
@@ -789,7 +813,7 @@ class myGLCanvas(GLCanvas):
             gl.glPushMatrix()
             if self.structure[4][0]:
                 gl.glMultMatrixf(self.elements[self.structure[4][0]-1].T)
-            self.Transform(self.branches[self.structure[0]])
+            self.Transform(self.branches[self.structure[0]][1:])
             gl.glPopMatrix()
         
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
@@ -811,7 +835,6 @@ class myGLCanvas(GLCanvas):
 
     def GetParameters(self, branch, start_T, start_joint):
         old = start_joint
-        print 'old', old
         old_T = start_T
         init = False
         next_branch = []
@@ -830,7 +853,9 @@ class myGLCanvas(GLCanvas):
                         self.elements[joint-1].param = 6
                 
             for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
-                next_branch.append([k[1:],[],old])
+##                next_branch.append([k[1:],[],old])
+                next_branch.append([k[1:],old_T,old])
+
             init = True
             
         return next_branch        
@@ -851,13 +876,15 @@ class myGLCanvas(GLCanvas):
                 else:
                     break
                 old = joint
+
+    def SetConfiguration(self):
                     
-##        for branch in self.branches[self.structure[0]:self.structure[1]+1]:
-##            for joint in branch:
-##                if isinstance(self.elements[joint-1], SuperRevoluteJoint):
-##                    self.elements[joint-1].theta = 0
-##                if isinstance(self.elements[joint-1], SuperPrismaticJoint):
-##                    self.elements[joint-1].r = 0.2
+        for branch in self.branches[self.structure[0]:self.structure[1]+1]:
+            for joint in branch:
+                if isinstance(self.elements[joint-1], SuperRevoluteJoint):
+                    self.elements[joint-1].theta = 0
+                if isinstance(self.elements[joint-1], SuperPrismaticJoint):
+                    self.elements[joint-1].r = 0.5
 
     def GetTransforms(self, branch, old_T, next_branch):
         new_T = old_T

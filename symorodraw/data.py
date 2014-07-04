@@ -45,13 +45,13 @@ class data():
                                         'panel':'PANEL_TOP',
                                         'callback':'OnPrismatic'
                                         }
-        self.widgets['ON_FIXED'] = {'w_type':'button',
-                                    'label':'Fixed',
-                                    'parent':'ON_JOINTS',
-                                    'panel':'PANEL_TOP',
-                                    'position':2,
-                                    'callback':'OnFixed'
-                                    }
+##        self.widgets['ON_FIXED'] = {'w_type':'button',
+##                                    'label':'Fixed',
+##                                    'parent':'ON_JOINTS',
+##                                    'panel':'PANEL_TOP',
+##                                    'position':2,
+##                                    'callback':'OnFixed'
+##                                    }
         
         #Planes
         self.widgets['ON_PLANES'] = {'w_type':'static_sizer',
@@ -510,12 +510,12 @@ class data():
                                 'position':1,
                                 'callback':'OnRevolute'
                                     }
-        self.widgets['J_FIXED'] = {'w_type':'menu_item',
-                                'parent':'JOINTS',
-                                'label':'Fixed',
-                                'position':2,
-                                'callback':'OnFixed'
-                                    }
+##        self.widgets['J_FIXED'] = {'w_type':'menu_item',
+##                                'parent':'JOINTS',
+##                                'label':'Fixed',
+##                                'position':2,
+##                                'callback':'OnFixed'
+##                                    }
         self.widgets['P_1'] = {'w_type':'menu_item',
                                 'parent':'PLANES',
                                 'label':'Point and line',

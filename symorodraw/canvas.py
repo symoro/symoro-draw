@@ -223,8 +223,7 @@ class myGLCanvas(GLCanvas):
 
         frames = [ i for i in frames if not i in end and not i in cut]
         frames += end + cut
-        print 'frames', frames
-        print NF
+        
         sigma, mu, theta, alpha, gamma, d, r, b, ant = [],[],[],[],[],[],[],[],[]
 
         for frame in frames:
@@ -235,7 +234,7 @@ class myGLCanvas(GLCanvas):
                 sigma.append(0)
             else:
                 sigma.append(2)
-            print self.elements[frame-1].ant
+                
             i = [i for i in range(len(frames)) if frames[i] == self.elements[frame-1].ant]
             
             if len(i)==0 and self.elements[frame-1].ant==self.structure[4][0]:
@@ -1106,8 +1105,6 @@ class myGLCanvas(GLCanvas):
         self.OnDraw()
         self.Redraw()
         gl.glPopMatrix()
-        for a,b, name in my_buffer:
-            print name
         return my_buffer
 
     # Initalization of the OpenGL

@@ -66,7 +66,6 @@ class MainFrame(wx.Frame):
                 self.SetMenus()
 # Initalization of elements             
         def CreateMenuElements(self, key):
-                print key
                 if self.data.GetValue(key,'w_type')=='menu_bar':
                         self.menu_bars[key] = wx.MenuBar()
                 elif self.data.GetValue(key,'w_type')=='menu':
@@ -90,7 +89,6 @@ class MainFrame(wx.Frame):
                         self.CreateMenuElements(name)
 # Filling the menu
         def AppendMenuElements(self, key):
-                print key
                 my_list = self.data.SortPosition(key)
                 for name in my_list:
                         self.AppendMenuElements(name)
@@ -120,7 +118,6 @@ class MainFrame(wx.Frame):
                 self.SetSizerAndFit(self.sizers['MAIN'])
 
         def CreateElements(self, key):
-                print key
                 my_type = self.data.GetValue(key,'w_type')
                 if my_type == 'static_text':
                         self.CreateText(key)
@@ -147,9 +144,7 @@ class MainFrame(wx.Frame):
                         self.CreateElements(name)
 
         def FillSizers(self, key):
-                print key
                 if not self.data.GetValue(key, 'w_type') == 'grid':
-                        print key, 'kry'
                         my_list = self.data.SortPosition(key)
                 else:
                         my_list = self.data.GetTypedList('parent',key)
@@ -466,7 +461,6 @@ class MainFrame(wx.Frame):
                         self.data.FlagSet('MODE',1)
         # Subfunction to the Defining parameters callbacks                
         def DefineD_H(self):
-                print 'here'
                 self.canvas['CANVAS'].structure, self.canvas['CANVAS'].branches = self.canvas['CANVAS'].DefineStructure()
                 if self.canvas['CANVAS'].structure and self.canvas['CANVAS'].branches:
                         next_branch = [[self.canvas['CANVAS'].branches[self.canvas['CANVAS'].structure[0]][1:],
@@ -577,7 +571,6 @@ class MainFrame(wx.Frame):
                 if not joint_id == -2:
                         joint = self.canvas['CANVAS'].elements[joint_id-1]
                 else:
-                        print 'id'
                         joint = self.canvas['CANVAS'].globFrame
 
                 for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):

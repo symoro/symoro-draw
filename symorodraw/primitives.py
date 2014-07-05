@@ -6,7 +6,9 @@ from itertools import product
 
 from numpy import sin, cos, pi
 
-
+## In this file only one change has been made. The arrow is now draw along the x-axis not z-axis like was implemented before
+# This chage is necessary to proper working of symorodraw module. For symoroviz it only changes the visualization of the frame
+# and would require only one change in the draw_frame mathod form object.py file from symorviz.
 def create_cyl_array(radius, length, n_segments, centered=True):
     vertices, indices, normals = [], [], []
     z = -length / 2. if centered else 0

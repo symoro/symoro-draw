@@ -10,6 +10,8 @@ from numpy import degrees, identity, array
 
 from primitives import Primitives
 
+## This file is mostly the same like objects.py from symoroviz module, however changes made during development requierd to keep both files.
+# It is possible to combine both files but it would reqiuer some work
 
 class Frame(object):
     def __init__(self, index=0, T=identity(4), show_frame=True, my_id=0):
@@ -282,6 +284,7 @@ class FixedJoint(JointObject):
             Primitives.sph_array(new_length)
         super(FixedJoint, self).set_length(new_length)
 
+## Super***Joint have the function to draw different elements
 class SuperRevoluteJoint(RevoluteJoint):
     def __init__(self, *args, **kwargs):
         super(SuperRevoluteJoint, self).__init__(*args, **kwargs)
@@ -408,7 +411,7 @@ class SuperFixedJoint(FixedJoint):
         gL.glPopMatrix()
 
     
-
+# Class is used to represent the links in the program
 class Point(FixedJoint):
     def __init__(self, pos, my_id, *args):
         super(FixedJoint, self).__init__(*args)

@@ -16,12 +16,7 @@ from numpy.linalg import norm, inv
 from sympy import Expr, var, Symbol, Matrix
 import draw
 
-from pysymoro.invgeom import loop_solve
-from pysymoro.geometry import dgm
 from pysymoro.robot import Robot
-from symoroutils import samplerobots
-from symoroutils import symbolmgr
-from symoroutils import tools
 from symoroutils import parfile
 from symoroutils.tools import CLOSED_LOOP, SIMPLE, TREE, TYPES, INT_KEYS
 
@@ -29,9 +24,16 @@ import itertools
 
 from objects import Frame, SuperRevoluteJoint, FixedJoint, SuperPrismaticJoint, JointObject, Point, Line, SuperFixedJoint
 
+## This class is responsible for all elements conected with OpenGL and calculations of parameters.
+#  All informations are kept in the slef.elements (keep all elements in the progrma) and self.links (connection between elements) lists.
+#  When parameters are calulated informations necessary for the calcualtion are kept in the self.structure and self.branches.
+#  self.branches: one branch: id of the following elements in a branch, starting from common link or base
+#  self.structure: [first number of self.branch describing structure, last branch describing structure,
+#  links in the structur, joints, fixed joints (global frame in current implmenetation, cut joint) 
+#  cut joint is kept as: previous link id, joint id, follower id
 
 class myGLCanvas(GLCanvas):
-    def __init__(self, parent, size=(900, 900)):
+    def __init__(self, parent, size=(700, 700)):
         super(myGLCanvas, self).__init__(parent, size=size)
         self.context = GLContext(self)
         self.Bind(wx.EVT_PAINT, self.OnPaintAll)
@@ -140,6 +142,8 @@ class myGLCanvas(GLCanvas):
                 self.MakeConstrain(my_buffer, 'AT_ANGLE')
             elif self.parent.data.FlagGet('AT_DISTANCE'):
                 self.MakeConstrain(my_buffer, 'AT_DISTANCE')
+            elif self.parent.data.FlagGet('PLANE_PERPENDICULAR'):
+                self.MakeConstrain(my_buffer, 'PLANE_PERPENDICULAR')
             else:
                 self.Activate(my_buffer)
             
@@ -150,8 +154,7 @@ class myGLCanvas(GLCanvas):
                 self.parent.data.FlagReset('REF_POINT')
                 self.parent.data.FlagIncrement('PICK')
 
-        
-
+    #   On double-click reset the flags, abandon current operation
     def OnMouseDoubleLeft(self, evt):
         self.parent.data.FlagsChange('joint')
         self.parent.data.FlagsChange('ref')
@@ -160,6 +163,30 @@ class myGLCanvas(GLCanvas):
         self.parent.data.FlagsChange('constraints')
         del self.plane[:]
 
+    def OnMouseUp(self, _):
+        if self.HasCapture():
+            self.ReleaseMouse()
+
+    def OnMouseMotion(self, evt):
+        if evt.Dragging():
+            x, y = evt.GetPosition()
+            
+            if evt.LeftIsDown():
+                dx, dy = x - self.lastx, y - self.lasty
+                self.lastx, self.lasty = x, y
+
+                if evt.RightIsDown():
+                    self.Pan(dx,dy)
+                else:
+                    self.Rotate(dx,dy)
+                    
+            elif evt.RightIsDown():
+                self.Zoom(y)
+
+            self.CameraTransformation()
+            self.Refresh(False)
+
+    # Exporting to the .par file
     def Export(self, name):
         NJ = len([i for i in self.elements if isinstance(i, SuperRevoluteJoint) or isinstance(i, SuperPrismaticJoint)])
         NL = len([i for i in self.elements if isinstance(i, Point)])-1
@@ -252,10 +279,9 @@ class myGLCanvas(GLCanvas):
                     
         parfile.writepar(robot)
         
-                    
-
+    # This function defines the structure of the robot, the branches, cut_joints, links and joints in the sturcture 
     def DefineStructure(self):
-
+        #Clear elements before analysis
         to_delete = [i.my_id for i in self.elements if i.virtual_joint]
        
         for i in reversed(to_delete):
@@ -274,7 +300,8 @@ class myGLCanvas(GLCanvas):
         joints = []
         fixed = [start]
         my_links = []
-        
+
+        # Assign cut joints adn check if model is valid
         for element in self.elements:
             if isinstance(element, SuperRevoluteJoint) or isinstance(element, SuperPrismaticJoint):
                 i = [i for i in self.links if i[1]==element.my_id] 
@@ -296,7 +323,7 @@ class myGLCanvas(GLCanvas):
         branches[-1], links, used, joints, fixed, my_links = self.GetBranch(start, links, used, joints, fixed, cut_joints, my_links)
         struct.append(len(branches)-1)
         
-
+    # Find branches
         while len(branches[-1])>1:
             key = self.FindKey(links, branches)
             branches.append([])
@@ -326,7 +353,7 @@ class myGLCanvas(GLCanvas):
                 branch.append(self.elements[-1].my_id)
                 self.elements[-1].virtual_joint = True
                 
-
+    # Fill structure
         struct.append(len(branches)-2)
         struct.append(used)
         struct.append(joints)
@@ -334,15 +361,8 @@ class myGLCanvas(GLCanvas):
         struct.append(cut_joints)
         struct.append(my_links)
         return struct, branches
-
-    def FindKey(self, links, branches):
-        key = -1
-        for branch in branches:
-            for link in links:
-                if link[0] in branch[:-1] :
-                    return link[0]
-        return key        
-
+    
+    # Find begining of the structure
     def FindStart(self, links, branches):
         i = [i[1] for i in links if not i[1]]
         if len(i):
@@ -353,7 +373,17 @@ class myGLCanvas(GLCanvas):
                 return i[0]
         
         return -1
+    
+    # Find begining of the new branch
+    def FindKey(self, links, branches):
+        key = -1
+        for branch in branches:
+            for link in links:
+                if link[0] in branch[:-1] :
+                    return link[0]
+        return key
 
+    # Deinfe the new branch
     def GetBranch(self, key, links, used, joints, fixed, cut_joints, my_links):
         branch = []
         check = True
@@ -391,6 +421,7 @@ class myGLCanvas(GLCanvas):
                 
         return  branch, links, used, joints, fixed, my_links
 
+    # Activating the element: Joint or Link
     def Activate(self, my_buffer):
         for min_d, max_d, name in my_buffer:
     
@@ -398,16 +429,16 @@ class myGLCanvas(GLCanvas):
             if len(name)>1:
                 if name[0]:
                     self.elements[name[0]-1].color_j=[1,0,0]
-                    self.parent.ActiveJoint(name[0], self.elements[name[0]-1].param)
+                    self.parent.ActiveJoint(name[0])
                 elif name[0]==0:
-                    self.parent.ActiveJoint(-2, 0)
+                    self.parent.ActiveJoint(-2)
             else:
                 self.elements[name[0]-1].color_j=[1,0,0]
                 self.elements[name[0]-1].color_l=[1,0,0]
                 self.parent.ActiveLink(name[0])
             break
         
-
+    # Deactivating the element: Joint or Link
     def Deactivate(self):
         if self.parent.data.FlagGet('ACTIVE_JOINT')==-2:
             self.globFrame.color_j=[0,0.6,0.5]
@@ -424,6 +455,7 @@ class myGLCanvas(GLCanvas):
             self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].color_l=[1,1,1]
         self.parent.Deactive()
 
+    # Adding the link to the system
     def AddAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not name[0] or not isinstance(self.elements[name[0]-1],Point):
@@ -443,6 +475,7 @@ class myGLCanvas(GLCanvas):
                 self.parent.data.FlagReset('ADD_ANC')
                 break
 
+    # Removing link from the system
     def RemAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not isinstance(self.elements[name[0]-1],Point) or not name[0]:
@@ -463,6 +496,7 @@ class myGLCanvas(GLCanvas):
                 self.parent.data.FlagReset('REM_ANC')
                 break
 
+    # Applying the geometrical constraints
     def MakeConstrain(self, my_buffer, flag):
             for min_d, max_d, name in my_buffer:
                 if  not name[0] or not isinstance(self.elements[name[0]-1],Point):
@@ -493,6 +527,9 @@ class myGLCanvas(GLCanvas):
                                 u = subtract(self.elements[name[0]-1].T[3,0:3],axis.T[3,0:3])
                                 u /= norm(u)
                                 self.elements[name[0]-1].T[3,0:3]=add(axis.T[3,0:3],multiply(u,val))
+                        elif flag == 'PLANE_PERPENDICULAR':
+                            u = self.u/norm(self.u)
+                            self.elements[name[0]-1].T[0:3,0:3]=axis.T[0:3,0:3].dot(self.EulerTransformation((pi/2),u))
 
                         del self.plane[:]
                         self.parent.data.FlagSet('PARAMETERS',3)
@@ -502,7 +539,8 @@ class myGLCanvas(GLCanvas):
                         self.parent.data.FlagSet('PARAMETERS',3)
                         self.parent.data.FlagReset(flag)
                     break
-                        
+
+    # Handling deleting element from the system, check elements, links, and correcting ids of the elements                      
     def Delete(self,name):
         if name and name[0]:
             if len(name)>1:
@@ -525,13 +563,15 @@ class myGLCanvas(GLCanvas):
             self.parent.data.FlagReset('DELETE')
             self.parent.data.FlagSet('PARAMETERS',3)
             return True
-                
+
+    # Initate the delete operation called by user                
     def OnDelete(self, my_buffer):
         for a, b, name in my_buffer:
             check = self.Delete(name)
             if check:
                 break
-                
+
+    # Menage gathering informations about elements and intilaise creation                
     def DefinePlane(self, my_buffer):
         for key in self.parent.data.FlagList('plane'):
             if self.parent.data.FlagGet(key)==1:
@@ -559,33 +599,10 @@ class myGLCanvas(GLCanvas):
                             self.InitPlane2()
                             break
 
-    def InitPlane3(self):
-        points = []
-        for i in range(0,3):
-            if isinstance(self.elements[self.plane[i][0]-1], Point):
-                points.append(self.elements[self.plane[i][0]-1].pos)
-            else:
-                points.append(self.elements[self.plane[i][0]-1].T[3,0:3])
-                
-        vect1 = subtract(points[0],points[1])
-        vect2 = subtract(points[0],points[2])
-        vect1 /= norm(vect1)
-        vect2 /= norm(vect2)
-        if norm(cross(vect1,vect2))<0.01:
-            msg = wx.MessageDialog (None, 'Cannot define the frame, points are coolinear', style=wx.OK|wx.CENTRE)
-            msg.ShowModal()
-        else:
-            normal = cross(vect1,vect2)
-            normal /= norm(normal)  
-            self.CreatePlane(normal,points[0], vect1)
-        self.parent.data.FlagReset('PLANE3')
-        del self.plane[:]
-
+    # Init1Plane1, InitPlane2, InitPlane3 prepare the elements to the CreatePlane
     def InitPlane1(self):
-        if isinstance(self.elements[self.plane[0][0]-1], Point):
-            point = self.elements[self.plane[0][0]-1].pos
-        else:
-            point = self.elements[self.plane[0][0]-1].T[3,0:3]
+        point = self.elements[self.plane[0][0]-1].T[3,0:3]
+        
         
         if self.plane[1][1]==4:
             axis = self.elements[self.plane[1][0]-1]
@@ -597,18 +614,30 @@ class myGLCanvas(GLCanvas):
                 axis = self.elements[self.plane[1][0]-1]
             if self.plane[1][1]==1:
                 vect1 = inv(axis.T[0:3,0:3]).dot([1,0,0])
-            elif self.plane[1][2]==1:
+            elif self.plane[1][1]==2:
                 vect1 = inv(axis.T[0:3,0:3]).dot([0,1,0])
             else:
                 vect1 = inv(axis.T[0:3,0:3]).dot([0,0,1])
                 
-        vect1 /= norm(vect1)
+        if norm(vect1)>0.01:
+            vect1 /= norm(vect1)
+        else:
+            msg = wx.MessageDialog (None, 'Cannot define the plane', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
+            return
+        
         vect2 = axis.T[3,0:3]-point
-        vect2 /= norm(vect2)
+        if norm(vect2)>0.01:
+            vect2 /= norm(vect2)   
+        else:
+            msg = wx.MessageDialog (None, 'Cannot define the plane', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
+            return
         
         if norm(cross(vect1,vect2))<0.01:
             msg = wx.MessageDialog (None, 'Cannot define the frame', style=wx.OK|wx.CENTRE)
             msg.ShowModal()
+            return
         else:
             normal = cross(vect1,vect2)
             normal /= norm(normal)
@@ -656,6 +685,40 @@ class myGLCanvas(GLCanvas):
         self.parent.data.FlagReset('PLANE2')
         del self.plane[:]
 
+    def InitPlane3(self):
+        points = []
+        for i in range(0,3):
+            if isinstance(self.elements[self.plane[i][0]-1], Point):
+                points.append(self.elements[self.plane[i][0]-1].pos)
+            else:
+                points.append(self.elements[self.plane[i][0]-1].T[3,0:3])
+                
+        vect1 = subtract(points[0],points[1])
+        vect2 = subtract(points[0],points[2])
+        if norm(vect1)>0.01:
+            vect1 /= norm(vect1) 
+        else:
+            msg = wx.MessageDialog (None, 'Cannot define the plane', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
+            return
+        if norm(vect2)>0.01:
+            vect2 /= norm(vect2)
+        else:
+            msg = wx.MessageDialog (None, 'Cannot define the plane', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
+            return
+        if norm(cross(vect1,vect2))<0.01:
+            msg = wx.MessageDialog (None, 'Cannot define the plane', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
+            return
+        else:
+            normal = cross(vect1,vect2)
+            normal /= norm(normal)  
+            self.CreatePlane(normal,points[0], vect1)
+        self.parent.data.FlagReset('PLANE3')
+        del self.plane[:]
+
+    # Directly creating plane
     def CreatePlane(self, normal, point, line):
         self.cen = point
         
@@ -669,30 +732,10 @@ class myGLCanvas(GLCanvas):
         self.OnDraw()
         self.Redraw()
 
-    def OnMouseUp(self, _):
-        if self.HasCapture():
-            self.ReleaseMouse()
 
-    def OnMouseMotion(self, evt):
-        if evt.Dragging():
-            x, y = evt.GetPosition()
-            
-            if evt.LeftIsDown():
-                dx, dy = x - self.lastx, y - self.lasty
-                self.lastx, self.lasty = x, y
 
-                if evt.RightIsDown():
-                    self.Pan(dx,dy)
-                else:
-                    self.Rotate(dx,dy)
-                    
-            elif evt.RightIsDown():
-                self.Zoom(y)
-
-            self.CameraTransformation()
-            self.Refresh(False)
-
-    ## Create elemnts
+    ## Create joint, recalculate the parmaters from screen to the global frame
+    #  Add all necessery adjustmen in the program
     def CreateJoint(self, my_type):
         coefY = norm(self.u)*tan(radians(self.fov/2))/self.size.height*2
         coefX = norm(self.u)*tan(radians(self.fov/2))/self.size.width*2*self.aspect
@@ -719,6 +762,7 @@ class myGLCanvas(GLCanvas):
         self.parent.data.FlagIncrement('PICK')
     
     ## Functions conected with camera
+    # Recalculating the elements form the screen to the global frame
     def GetCoordinates(self, x, y):
         coefY = norm(self.u)*tan(radians(self.fov/2))/self.size.height*2
         coefX = norm(self.u)*tan(radians(self.fov/2))/self.size.width*2*self.aspect
@@ -739,7 +783,8 @@ class myGLCanvas(GLCanvas):
         trans = dy+dx+self.cen
 ##      print glu.gluUnProject(x,y, self.cen[2])               
         return trans
-
+    
+    # Calulate the rotation matrix from the euler parameters
     def EulerTransformation(self, angle, vector):
         e0 = cos(angle/2)
         e = multiply(sin(angle/2),vector)
@@ -749,6 +794,7 @@ class myGLCanvas(GLCanvas):
              hstack((e[0]*e[2]-e0*e[1],e[2]*e[1]+e0*e[0],e0*e0+e[2]*e[2]-0.5))))
         return R     
 
+    # Change the position of the camera
     def CameraTransformation(self):
         gl.glLoadIdentity()
         glu.gluLookAt(self.cam[0],self.cam[1],self.cam[2],
@@ -756,6 +802,8 @@ class myGLCanvas(GLCanvas):
             self.up[0], self.up[1], self.up[2])
         self.u = subtract(self.cen,self.cam)
 
+    ## Rotation of the camera cooperate with rotate function
+    # Calulate the parameters of the camera when changes in horizontal and vertical angels are known
     def SetCamera(self, ver, hor):
         u = cross(self.up, self.u/norm(self.u))
 
@@ -767,7 +815,7 @@ class myGLCanvas(GLCanvas):
 
         if not norm(cross(u,self.up))<0.05:
             self.cam  = subtract(self.cen,multiply(u,norm(self.u)))
-
+    
     def Pan(self,dx,dy):
         coefY = norm(self.u)*tan(radians(self.fov/2))/self.size.height*2
         coefX = norm(self.u)*tan(radians(self.fov/2))/self.size.width*2*self.aspect
@@ -792,7 +840,8 @@ class myGLCanvas(GLCanvas):
         du = 2 * float(dy) / self.size.height
         self.cam += multiply(self.u,du)
 
-    ## Drawing Functions        
+    ## Drawing Functions
+    # OpenGL callback
     def OnPaintAll(self, event):
         
         self.SetCurrent(self.context)
@@ -809,6 +858,7 @@ class myGLCanvas(GLCanvas):
         self.Redraw()
         event.Skip()
 
+    # Drawing elements, called be OnPaintAll (OpenGL) and when picking
     def OnDraw(self):
         if not self.init:
             return
@@ -837,6 +887,13 @@ class myGLCanvas(GLCanvas):
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
         gl.glDisableClientState(gl.GL_NORMAL_ARRAY)
 
+    # Initalize the drawing in OpenGL
+    def Redraw(self):
+        gl.glFlush()
+        self.SwapBuffers()
+        self.Refresh(False)
+
+    # Menage recursive drawing in the parameters mode
     def Transform(self, branch):
         gl.glPushMatrix()
         for joint in branch:
@@ -849,6 +906,7 @@ class myGLCanvas(GLCanvas):
                 
         gl.glPopMatrix()
 
+    # Menage calculating the parameters
     def GetParameters(self, branch, start_T, start_joint):
         old = start_joint
         old_T = start_T
@@ -876,6 +934,7 @@ class myGLCanvas(GLCanvas):
             
         return next_branch        
 
+    # Adjusting the parameters into the D-H notations
     def SetParameters(self, branch):
         
         init = False
@@ -893,6 +952,7 @@ class myGLCanvas(GLCanvas):
                     break
                 old = joint
 
+    # Puttin variables into the begining configuration
     def SetConfiguration(self):
                     
         for branch in self.branches[self.structure[0]:self.structure[1]+1]:
@@ -902,6 +962,7 @@ class myGLCanvas(GLCanvas):
                 if isinstance(self.elements[joint-1], SuperPrismaticJoint):
                     self.elements[joint-1].r = 0.2
 
+    # Caluclating the transforamtion matrix for new branch
     def GetTransforms(self, branch, old_T, next_branch):
         new_T = old_T
         for joint in branch:
@@ -917,7 +978,7 @@ class myGLCanvas(GLCanvas):
 
         return next_branch
             
-                
+    # Pure calucaltion of parameters          
     def Parameters(self,  new_id,old_T):
         
         T = dot(inv(old_T),transpose(self.elements[new_id-1].T))
@@ -930,7 +991,7 @@ class myGLCanvas(GLCanvas):
         d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
 
         if not sin(alpha):
-            r = 0
+            r = T[2,3]
         elif not sin(gamma):
             r = T[0,3]/sin(alpha)
         else:
@@ -954,6 +1015,7 @@ class myGLCanvas(GLCanvas):
 
         return old_T.dot(new_T)
 
+    # Get Transformation matrix for the next frame
     def GetT(self, gamma, b, alpha, d, theta, r):
         new_T = [[cos(gamma)*cos(theta)-sin(gamma)*cos(alpha)*sin(theta),
                   -cos(gamma)*sin(theta)-sin(gamma)*cos(alpha)*cos(theta),
@@ -968,12 +1030,14 @@ class myGLCanvas(GLCanvas):
                  [0,0,0,1]]
         return new_T
 
+    # Keep the current configuration befor jumping into the oder mode
     def SaveConfiguration(self):
         self.configuration = []
         for element in self.elements:
             if not isinstance(element, Point):
                 self.configuration.append([element.my_id, element.gamma, element.b, element.alpha, element.d, element.theta, element.r])
 
+    # Reload the current configuration
     def LoadConfiguration(self):
         for i in self.configuration:
             self.elements[i[0]-1].gamma = i[1]
@@ -982,14 +1046,8 @@ class myGLCanvas(GLCanvas):
             self.elements[i[0]-1].d = i[4]
             self.elements[i[0]-1].theta = i[5]
             self.elements[i[0]-1].r = i[6]
-                
-        
-    
-    def Redraw(self):
-        gl.glFlush()
-        self.SwapBuffers()
-        self.Refresh(False)
 
+    # Setting up and create the element in the program, menage global id, 
     def DrawElements(self, my_type, T=identity(4), pos=[0,0,0]):
         if self.parent.data.FlagGet('MODE'):
                         msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
@@ -1020,6 +1078,7 @@ class myGLCanvas(GLCanvas):
 
                 
     ##OpenGL handling
+    # Picking operation
     def Pick(self):
         self.globFrame.named = False
         for element in self.elements:
@@ -1050,7 +1109,8 @@ class myGLCanvas(GLCanvas):
         for a,b, name in my_buffer:
             print name
         return my_buffer
-        
+
+    # Initalization of the OpenGL
     def InitGL(self):
         # set viewing projection
         mat_specular = (1.0, 1.0, 1.0, 1.0)

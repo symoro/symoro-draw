@@ -1,7 +1,7 @@
 import wx
 
 class data():
-    '''This Class keep informations identifying the widgets'''
+    '''This Class keep informations identifying the widgets and flags'''
     
     def __init__(self):
         self.widgets = {}
@@ -17,7 +17,7 @@ class data():
                                 }
         #Canvas
         self.widgets['CANVAS'] = {'w_type':'canvas',
-                                    'position':1,
+                                    'position':2,
                                     'parent':'PANEL_SIZE_V'
                                     }
         #PANEL TOP ELEMENTS
@@ -88,9 +88,9 @@ class data():
         #Constrains
         self.widgets['ON_CONSTRAINS'] = {'w_type':'static_sizer',
                                      'label':'Constraints',
-                                     'panel':'PANEL_TOP',
-                                     'parent':'GRID',
-                                     'horizontal':3,
+                                     'panel':'PANEL_TOP_2',
+                                     'parent':'GRID_2',
+                                     'horizontal':1,
                                      'vertical':0,
                                      'active':True,
                                      'orientation':wx.HORIZONTAL
@@ -99,28 +99,35 @@ class data():
                                     'label':'Parallel',
                                     'parent':'ON_CONSTRAINS',
                                     'position':0,
-                                    'panel':'PANEL_TOP',
+                                    'panel':'PANEL_TOP_2',
                                     'callback':'OnParallel'
                                     }
         self.widgets['ON_PERPENDICULAR'] = {'w_type':'button',
-                                    'label':'Perpendicular',
+                                    'label':'Space Per',
                                     'parent':'ON_CONSTRAINS',
                                     'position':1,
-                                    'panel':'PANEL_TOP',
+                                    'panel':'PANEL_TOP_2',
                                     'callback':'OnPerpendicular'
+                                    }
+        self.widgets['ON_PER_PLANE'] = {'w_type':'button',
+                                    'label':'Plane Per',
+                                    'parent':'ON_CONSTRAINS',
+                                    'position':2,
+                                    'panel':'PANEL_TOP_2',
+                                    'callback':'OnPlanePerpendicular'
                                     }
         self.widgets['ON_AT_ANGLE'] = {'w_type':'button',
                                     'label':'At angle',
                                     'parent':'ON_CONSTRAINS',
-                                    'position':2,
-                                    'panel':'PANEL_TOP',
+                                    'position':3,
+                                    'panel':'PANEL_TOP_2',
                                     'callback':'OnAtAngle'
                                     }
         self.widgets['ON_AT_DISTANCE'] = {'w_type':'button',
                                     'label':'At Distance',
                                     'parent':'ON_CONSTRAINS',
-                                    'position':3,
-                                    'panel':'PANEL_TOP',
+                                    'position':4,
+                                    'panel':'PANEL_TOP_2',
                                     'callback':'OnAtDistance'
                                     }
         #References
@@ -141,7 +148,7 @@ class data():
                                      'orientation':wx.HORIZONTAL
                                     }
 
-        #Panels
+        #Panels and sizers
         self.widgets['PANEL_V'] = {'w_type':'panel',
                                     'parent':'MAIN',
                                      'position':0
@@ -168,6 +175,22 @@ class data():
                                 'vertical':10
                                     }
         
+        self.widgets['PANEL_TOP_2'] = {'w_type':'panel',
+                                    'parent':'PANEL_SIZE_V',
+                                     'position':1
+                                    }        
+        self.widgets['PANEL_TOP_SIZER_2'] = {'w_type':'sizer',
+                                'parent':'PANEL_TOP_2',
+                                'position':0,
+                                'orientation':wx.HORIZONTAL
+                                    }
+        self.widgets['GRID_2'] = {'w_type':'grid',
+                                'parent':'PANEL_TOP_SIZER_2',
+                                'position':0,
+                                'horizontal':10,
+                                'vertical':10
+                                    }
+        
         self.widgets['PANEL_SIDE'] = {'w_type':'panel',
                                     'parent':'MAIN',
                                      'position':1
@@ -185,12 +208,14 @@ class data():
                                 'border':5,
                                 'flag':wx.RIGHT
                                     }
+        
         self.widgets['PANEL_JOINT_SIZER'] = {'w_type':'sizer',
                                 'parent':'GRID_SIDE',
                                 'horizontal':0,
                                 'vertical':6,
                                 'orientation':wx.VERTICAL
                                     }
+        
         #Panel Side Elements       
         self.widgets['ON_DELETE'] = {'w_type':'button',
                                     'label':'Delete',
@@ -200,6 +225,7 @@ class data():
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnDelete'
                                     }
+        #Links
         self.widgets['ON_ANCESTORS'] = {'w_type':'static_sizer',
                                      'label':'Link',
                                      'panel':'PANEL_SIDE',
@@ -226,11 +252,74 @@ class data():
                                     'checked':False,
                                     'active':True
                                     }
+        #Variable parameter
+        self.widgets['ON_VARIABLES'] = {'w_type':'static_sizer',
+                                     'label':'Variable',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'PANEL_JOINT_SIZER',
+                                     'position':4,
+                                     'active':False,
+                                     'orientation':wx.VERTICAL,
+                                    'flag':wx.RIGHT
+                                    }
+        self.widgets['ON_VAR_S_THETA'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_VARIABLES',
+                                     'position':1,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
+        self.widgets['VAR_TEXT_THETA'] = {'w_type':'static_text',
+                                           'label':'th',
+                                     'parent':'ON_VAR_S_THETA',
+                                     'position':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                      'size':(20,-1)
+                                    }
+        
+        self.widgets['VAR_ON_THETA'] = {'w_type':'float_spin',
+                                 'parent':'ON_VAR_S_THETA',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnTheta',
+                                 'position':1,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        
+        self.widgets['ON_VAR_S_R'] = {'w_type':'sizer',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'ON_VARIABLES',
+                                     'position':0,
+                                     'active':False,
+                                     'orientation':wx.HORIZONTAL
+                                    }
+        self.widgets['VAR_TEXT_R'] = {'w_type':'static_text',
+                                           'label':'r',
+                                     'parent':'ON_VAR_S_R',
+                                     'position':0,
+                                    'panel':'PANEL_SIDE',
+                                     'active':True,
+                                  'size':(20,-1)
+                                    }
+        self.widgets['VAR_ON_R'] = {'w_type':'float_spin',
+                                 'parent':'ON_VAR_S_R',
+                                 'panel':'PANEL_SIDE',
+                                 'callback':'OnR',
+                                 'position':1,
+                                 'min_val':None,
+                                 'max_val':None,
+                                 'increment':0.01,
+                                 'size':(60,-1)
+                                 }
+        # Constant parameters
         self.widgets['ON_PARAMETERS'] = {'w_type':'static_sizer',
                                      'label':'Parameters',
                                      'panel':'PANEL_SIDE',
                                      'parent':'PANEL_JOINT_SIZER',
-                                     'position':4,
+                                     'position':5,
                                      'active':False,
                                      'orientation':wx.VERTICAL,
                                     'flag':wx.RIGHT
@@ -395,7 +484,7 @@ class data():
                                  'size':(60,-1)
                                  }
         
-        
+        # Other joint features
         self.widgets['ON_CHANGE_DIR'] = {'w_type':'button',
                                     'label':'Z Direction',
                                     'parent':'PANEL_JOINT_SIZER',
@@ -422,6 +511,7 @@ class data():
                                     'active':False,
                                     'callback':'OnCut'
                                     }
+        # Defining parameters
         self.widgets['ON_ANALYSIS'] = {'w_type':'static_sizer',
                                      'label':'Parmeters',
                                      'panel':'PANEL_SIDE',
@@ -477,25 +567,11 @@ class data():
                                 'position':0,
                                 'submenu':False
                                     }
-        self.widgets['NEW'] = {'w_type':'menu_item',
-                                'parent':'FILE',
-                                'label':'New',
-                                'id':wx.ID_NEW,
-                                'position':0,
-                               'callback':'OnNew'
-                                    }
         self.widgets['EXPORT'] = {'w_type':'menu_item',
                                 'parent':'FILE',
                                 'label':'Export',
                                 'position':1,
                                'callback':'OnExport'
-                                    }
-        self.widgets['EXIT'] = {'w_type':'menu_item',
-                                'parent':'FILE',
-                                'label':'New',
-                                'id':wx.ID_CLOSE,
-                                'position':2,
-                               'callback':'OnClose'
                                     }
         #Draw
         self.widgets['DRAW'] = {'w_type':'menu',
@@ -516,11 +592,11 @@ class data():
                                 'position':1,
                                 'submenu':True
                                     }
-        self.widgets['REFERENCES'] = {'w_type':'menu',
+        self.widgets['LINK'] = {'w_type':'menu_item',
                                 'parent':'DRAW',
-                                'label':'Reference Object',
+                                'label':'Link',
                                 'position':2,
-                                'submenu':True
+                                'callback':'OnRefPoint',
                                     }
         self.widgets['J_PRISMATIC'] = {'w_type':'menu_item',
                                 'parent':'JOINTS',
@@ -558,18 +634,7 @@ class data():
                                 'position':2,
                                 'callback':'OnPlane3'
                                 }
-        self.widgets['R_LINE'] = {'w_type':'menu_item',
-                                'parent':'REFERENCES',
-                                'label':'Line',
-                                'position':0,
-                                'callback':'OnRefLine'
-                                }
-        self.widgets['R_POINT'] = {'w_type':'menu_item',
-                                'parent':'REFERENCES',
-                                'label':'Point',
-                                'position':1,
-                                'callback':'OnRefPoint'
-                                }
+
         #View
         self.widgets['VIEW'] = {'w_type':'menu',
                                 'parent':'MENU_BAR',
@@ -617,16 +682,52 @@ class data():
                                 'position':5,
                                 'callback':'OnLeft'
                                 }
-        
-        self.widgets['ISOMETRIC'] = {'w_type':'menu_item',
+        #Constraints
+        self.widgets['CONSTRAINTS'] = {'w_type':'menu',
+                                'parent':'MENU_BAR',
+                                'label':'Constraints',
+                                'position':3,
+                                'submenu':False
+                                    }
+        self.widgets['PARALLEL'] = {'w_type':'menu_item',
                                 'parent':'VIEW',
-                                'label':'Isometric',
-                                'position':6,
-                                'callback':'OnIsometric'
+                                'label':'Parallel',
+                                'position':0,
+                                'callback':'OnParallel'
                                 }
+               
+        self.widgets['PERPENDICULAR'] = {'w_type':'menu_item',
+                                'parent':'VIEW',
+                                'label':'Perpendicular Space',
+                                'position':1,
+                                'callback':'OnPerpendicular'
+                                }
+        
+        self.widgets['PER_PLANE'] = {'w_type':'menu_item',
+                                'parent':'VIEW',
+                                'label':'Perpendicular Plane',
+                                'position':2,
+                                'callback':'OnPlanePerpendicular'
+                                }
+        self.widgets['AT_ANGLE'] = {'w_type':'menu_item',
+                                'parent':'VIEW',
+                                'label':'At Angle',
+                                'position':3,
+                                'callback':'OnAtAngle'
+                                }
+        
+        self.widgets['AT_DISTANCE'] = {'w_type':'menu_item',
+                                'parent':'VIEW',
+                                'label':'At Distance',
+                                'position':4,
+                                'callback':'OnAtDistance'
+                                }
+        
+        
+
 
 ##      Flags data
-
+# Flags keep information about actual status of the program and control the functions to not interupt each other
         self.flags['PRISMATIC'] = [0, 'joint']
         self.flags['REVOLUTE'] = [0, 'joint']
         self.flags['FIXED'] = [0, 'joint']
@@ -644,12 +745,13 @@ class data():
         self.flags['MODE'] = [0, 'mode'] # 0 -structure, 1-parameters
         self.flags['PARALLEL'] = [0, 'constraints']
         self.flags['PERPENDICULAR'] = [0, 'constraints']
+        self.flags['PLANE_PERPENDICULAR'] = [0, 'constraints']
         self.flags['AT_DISTANCE'] = [0, 'constraints']
         self.flags['AT_ANGLE'] = [0, 'constraints']
         self.flags['PARAMETERS'] = [0, 'initalization']
 
 ##  Methods widgets
-
+# Methods to get and set values of the falgs.
     def GetValue(self, name, key):
             return self.widgets[name][key]
 

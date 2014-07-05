@@ -1,4 +1,4 @@
-5#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8
 
 import wx
@@ -10,15 +10,19 @@ from pysymoro import robot
 from symorodraw import objects
 
 import canvas
-import graphics
 import data
 from numpy import *
-from numpy.linalg import inv, norm
+from numpy.linalg import norm
 
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import OpenGL.GLUT as glut
+from objects import Frame, SuperRevoluteJoint, SuperPrismaticJoint, Point
 
+# This class represents the main window of the program. It creates the elemetns of the program and fill all panels and sizers.
+# New elements can be added by adding the entry into the "widget" dictionary in data.py file. In case of the callback it has to be created in this class
+# If element is already use in the program, it should be automaticaly implemented
+# It carries out the simple operations and sent the inital signals to the main program to begin mulit-click operations.
 
 class MainFrame(wx.Frame):
         '''Create Main Window of the program'''
@@ -60,7 +64,7 @@ class MainFrame(wx.Frame):
                         self.CreateMenuElements('MENU_BAR')      
                         self.AppendMenuElements('MENU_BAR')
                 self.SetMenus()
-                
+# Initalization of elements             
         def CreateMenuElements(self, key):
                 print key
                 if self.data.GetValue(key,'w_type')=='menu_bar':
@@ -84,7 +88,7 @@ class MainFrame(wx.Frame):
                 my_list = self.data.GetTypedList('parent',key)
                 for name in my_list:    
                         self.CreateMenuElements(name)
-
+# Filling the menu
         def AppendMenuElements(self, key):
                 print key
                 my_list = self.data.SortPosition(key)
@@ -109,7 +113,7 @@ class MainFrame(wx.Frame):
                 my_list = self.data.GetTypedList('w_type','menu_bar')
                 for name in my_list:
                         self.SetMenuBar(self.menu_bars[name])
-	
+# Create UI	
         def create_ui(self):
                 self.CreateElements('MAIN')
                 self.FillSizers('MAIN')
@@ -179,7 +183,7 @@ class MainFrame(wx.Frame):
                                 
                         if self.data.GetValue(name,'w_type') == 'float_spin':
                                 self.FillFloatSpin(name)
-
+# Creators of specific type of elements
         def CreateText(self, key):
                 text = self.data.GetWidget(key)
                 if not self.data.CheckKey(key, 'size'):
@@ -242,7 +246,7 @@ class MainFrame(wx.Frame):
                 self.spins[key].Bind(FS.EVT_FLOATSPIN,  getattr(self, spin['callback']) )
                 self.spins[key].SetDigits(2)
                         
-
+# Specific to the type filling operations
         def FillButton(self, key):
                 button = self.data.GetWidget(key)
                 if self.data.GetValue(button['parent'],'w_type') =='grid':
@@ -378,7 +382,8 @@ class MainFrame(wx.Frame):
                                 self.sizers[spin['parent']].Add(self.spins[key], proportion=spin['proportion'], flag=spin['flag'], border=spin['border'])
                         elif self.data.GetValue(spin['parent'],'w_type')=='static_sizer':
                                 self.static_sizers[spin['parent']].Add(self.spins[key], proportion=spin['proportion'], flag=spin['flag'], border=spin['border'])
-
+# Callbacks
+#       Planes
         def OnPlane1(self, event):
                 self.Init('PLANE1')
         
@@ -387,14 +392,11 @@ class MainFrame(wx.Frame):
         
         def OnPlane3(self, event):
                 self.Init('PLANE3')
-		
-        def OnNew(self, event):
-                pass
-		
+
+#       Export		
         def OnExport(self, event):
                 self.Export()
-                
-
+        # Subfunction to the OnExport callback
         def Export(self):
                 export = wx.TextEntryDialog(None, 'Give the name of the robot',  style=wx.SYSTEM_MENU|wx.OK|wx.CANCEL)
                 if export.ShowModal()==wx.ID_OK:
@@ -405,25 +407,12 @@ class MainFrame(wx.Frame):
                                 msg = wx.MessageDialog (None, 'Cannot export, please give the name of the robot.', style=wx.OK|wx.CENTRE)
                                 if msg.ShowModal()==wx.ID_OK:
                                         self.Export()
-                
-		
-        def OnClose(self, event):
-                pass
-        
-        def OnShowDraw(self, event):
-                pass
-        
-        def OnShowView(self, event):
-                pass
         
         def OnRefPoint(self, event):
                 self.Init('REF_POINT')
                 self.data.FlagReset('PICK')
 
-        def OnRefLine(self, event):
-                self.Init('REF_POINT')
-                self.data.FlagReset('PICK')
-
+#       Camera, views
         def OnTop(self, event):
                 self.SetCamera([0,1,0],[0,0,-1])
 
@@ -441,24 +430,14 @@ class MainFrame(wx.Frame):
 
         def OnLeft(self, event):
                 self.SetCamera([-1,0,0],[0,1,0])
-        
-        def OnIsometric(self, event):
-                self.canvas['CANVAS'].ChangeCameraParameters(hor_angle=pi/4, ver_angle=pi/4)         
-
+                
+        # Subfunction to the camera callbacks
         def SetCamera(self, up, eye):
                 self.canvas['CANVAS'].up = up
                 self.canvas['CANVAS'].cam = add(multiply(eye,norm(self.canvas['CANVAS'].u)),self.canvas['CANVAS'].cen)
                 self.canvas['CANVAS'].CameraTransformation()
-               
-        def OnPan(self, event):
-                pass
 
-        def OnZoom(self, event):
-                pass
-        
-        def OnRotate(self, event):
-                pass
-
+#       Create Joints
         def OnRevolute(self, event):
                 self.Init('REVOLUTE')
                 self.data.FlagReset('PICK')
@@ -471,6 +450,7 @@ class MainFrame(wx.Frame):
                 self.Init('FIXED')
                 self.data.FlagReset('PICK')
 
+# PANEL_SIDE elements
         def OnDelete(self, event):
                 self.Init('DELETE')
 
@@ -484,7 +464,7 @@ class MainFrame(wx.Frame):
                 self.DefineD_H()
                 if self.canvas['CANVAS'].structure:
                         self.data.FlagSet('MODE',1)
-                        
+        # Subfunction to the Defining parameters callbacks                
         def DefineD_H(self):
                 print 'here'
                 self.canvas['CANVAS'].structure, self.canvas['CANVAS'].branches = self.canvas['CANVAS'].DefineStructure()
@@ -501,7 +481,6 @@ class MainFrame(wx.Frame):
                                 del next_branch[0]
                         self.data.FlagSet('PARAMETERS',1)           
                 
-
         def OnStructure(self,event):
                 self.data.FlagReset('MODE')
 
@@ -524,8 +503,18 @@ class MainFrame(wx.Frame):
                 if self.canvas['CANVAS'].structure:
                         self.data.FlagSet('MODE',1)
 
-        
+        def OnCut(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].cut_joint = event.EventObject.GetValue()
 
+        def OnActive(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].active = event.EventObject.GetValue()
+                
+
+        def OnChangeZAxis(self, event):
+                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3] = self.canvas['CANVAS'].EulerTransformation(pi,[1,0,0]).dot(self.canvas['CANVAS'].elements[
+                        self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3])
+
+        # Parameters
         def OnAlpha(self, event):
                 self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].alpha = event.EventObject.GetValue()
                 self.canvas['CANVAS'].OnDraw()
@@ -556,11 +545,15 @@ class MainFrame(wx.Frame):
                 self.canvas['CANVAS'].OnDraw()
                 self.canvas['CANVAS'].Redraw()
 
+        #Constraints
         def OnParallel(self, event):
                 self.Init('PARALLEL')
 
         def OnPerpendicular(self, event):
                  self.Init('PERPENDICULAR')
+
+        def OnPlanePerpendicular(self, event):
+                self.Init('PLANE_PERPENDICULAR')
 
         def OnAtDistance(self, event):
                 self.Init('AT_DISTANCE')
@@ -568,17 +561,8 @@ class MainFrame(wx.Frame):
         def OnAtAngle(self,event):
                 self.Init('AT_ANGLE')
 
-        def OnCut(self, event):
-                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].cut_joint = event.EventObject.GetValue()
-
-        def OnActive(self, event):
-                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].active = event.EventObject.GetValue()
-                
-
-        def OnChangeZAxis(self, event):
-                self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3] = self.canvas['CANVAS'].EulerTransformation(pi,[1,0,0]).dot(self.canvas['CANVAS'].elements[
-                        self.data.FlagGet('ACTIVE_JOINT')-1].T[0:3,0:3])
-
+        
+#       Function initaliazing the flag
         def Init(self, f_id):
                 if not self.data.FlagGet(f_id):
                         self.data.FlagsChange('joint')
@@ -587,40 +571,53 @@ class MainFrame(wx.Frame):
                         self.data.FlagsChange('button')
                         self.data.FlagsChange('constraints')
                         self.data.FlagIncrement(f_id)
-
-        def ActiveJoint(self,joint_id, j_type):
+                        
+#       Activating and the deactivating picked elements
+        def ActiveJoint(self,joint_id):
                 if not joint_id == -2:
                         joint = self.canvas['CANVAS'].elements[joint_id-1]
                 else:
                         print 'id'
                         joint = self.canvas['CANVAS'].globFrame
+
+                for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):
+                        if not key == 'ON_ANCESTORS':
+                                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue(key,'position'))
+                
+                if not joint.param or joint.virtual_joint:
+                        for key in self.data.GetTypedList('parent','ON_PARAMETERS'):
+                                self.sizers['ON_PARAMETERS'].Hide(self.data.GetValue(key,'position'))
+                        self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_R','position'))
+                        self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_THETA','position'))
                         
-                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_CUT_JOINT','position'))
-                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_ACTIVE','position'))
-                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_CHANGE_DIR','position'))
-                self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_PARAMETERS','position'))
-                if not j_type or self.canvas['CANVAS'].elements[joint_id-1].virtual_joint:
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_B','position'))
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_THETA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_D','position'))
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_R','position'))
-                if j_type == 4:
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_B','position'))
-                        self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_THETA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_D','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_R','position'))
-                elif j_type == 6:
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_B','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_THETA','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_D','position'))
-                        self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_R','position'))                       
+                else:
+                        if isinstance(joint,SuperRevoluteJoint):
+                                self.static_sizers['ON_VARIABLES'].Show(self.data.GetValue('ON_VAR_S_THETA','position'))
+                                self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_THETA','position'))
+                                self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_R','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_R','position'))
+                        elif isinstance(joint,SuperPrismaticJoint):
+                                self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_THETA','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_THETA','position'))
+                                self.static_sizers['ON_VARIABLES'].Show(self.data.GetValue('ON_VAR_S_R','position'))
+                                self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_R','position'))
+                        else:
+                                self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_THETA','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_THETA','position'))
+                                self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_R','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_R','position'))
                        
+                        if joint.param == 4:
+                                self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_B','position'))
+                                self.static_sizers['ON_PARAMETERS'].Hide(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_D','position'))
+                        elif joint.param == 6:
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_B','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_GAMMA','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_ALPHA','position'))
+                                self.static_sizers['ON_PARAMETERS'].Show(self.data.GetValue('ON_PARAM_S_D','position'))
+                        
                 
                 self.check_boxes['ON_ACTIVE'].SetValue(joint.active)
                 self.check_boxes['ON_CUT_JOINT'].SetValue(joint.cut_joint)
@@ -639,9 +636,13 @@ class MainFrame(wx.Frame):
         def Deactive(self):
                 for key in self.data.GetTypedList('parent','PANEL_JOINT_SIZER'):
                         self.sizers['PANEL_JOINT_SIZER'].Hide(self.data.GetValue(key,'position'))
+                self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_R','position'))
+                self.static_sizers['ON_VARIABLES'].Hide(self.data.GetValue('ON_VAR_S_THETA','position'))
+                        
                 self.data.FlagReset('ACTIVE_JOINT')
                 self.data.FlagReset('ACTIVE_LINK')
-
+                
+# Initalization of the program
 if __name__ == '__main__':
         app = wx.App(redirect = False)
         style = wx.DEFAULT_FRAME_STYLE^wx.MAXIMIZE_BOX^wx.RESIZE_BORDER

@@ -481,8 +481,9 @@ class MainFrame(wx.Frame):
                 self.Init('REM_ANC')
 
         def OnDefineD_H(self,event):
-                self.DefineD_H()                
-                self.data.FlagSet('MODE',1)
+                self.DefineD_H()
+                if self.canvas['CANVAS'].structure:
+                        self.data.FlagSet('MODE',1)
                         
         def DefineD_H(self):
                 print 'here'
@@ -498,18 +499,21 @@ class MainFrame(wx.Frame):
                                 self.canvas['CANVAS'].SetParameters(next_branch[0][0])
                                 next_branch += self.canvas['CANVAS'].GetTransforms(next_branch[0][0],next_branch[0][1], new_branch)
                                 del next_branch[0]
-                self.data.FlagSet('PARAMETERS',1)           
+                        self.data.FlagSet('PARAMETERS',1)           
                 
 
         def OnStructure(self,event):
                 self.data.FlagReset('MODE')
 
         def OnCheckParameters(self, event):
-                if not self.data.FlagGet('PARAMETERS'):
-                        self.DefineD_H()
+                if self.data.FlagGet('PARAMETERS')==3:
+                        msg = wx.MessageDialog (None, 'Structure has been changed, cannot come back to the previous configuration.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 elif self.data.FlagGet('PARAMETERS')==2:
                         self.canvas['CANVAS'].LoadConfiguration()
-                self.data.FlagSet('MODE',1)
+                if self.canvas['CANVAS'].structure:
+                        self.data.FlagSet('MODE',1)
 
         def OnConfiguration(self, event):
                 if not self.data.FlagGet('PARAMETERS'):
@@ -517,7 +521,8 @@ class MainFrame(wx.Frame):
                 self.data.FlagSet('PARAMETERS',2)
                 self.canvas['CANVAS'].SaveConfiguration()
                 self.canvas['CANVAS'].SetConfiguration()
-                self.data.FlagSet('MODE',1)
+                if self.canvas['CANVAS'].structure:
+                        self.data.FlagSet('MODE',1)
 
         
 

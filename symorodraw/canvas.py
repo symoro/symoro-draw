@@ -89,7 +89,6 @@ class myGLCanvas(GLCanvas):
         if minv == inf:
             minv = 1.
         self.length = 0.4 * minv
-        #print self.length
         for jnt in self.jnt_objs:
             if isinstance(jnt, PrismaticJoint):
                 jnt.r = 3.5 * self.length
@@ -187,15 +186,18 @@ class myGLCanvas(GLCanvas):
         cut = []
         
         for branch in self.branches[self.structure[0]:self.structure[1]+1]:
-            fr = [i for i in branch[2:-2] if not isinstance(self.elements[i-1], Point)]
+            frames += [i for i in branch[1:-2] if not isinstance(self.elements[i-1], Point)]
            
             if not self.elements[branch[-2]-1].virtual_joint:
                 end.append(branch[-2])
             else:
                 cut.append(branch[-2])
 
-        frames = fr + end + cut
 
+        frames = [ i for i in frames if not i in end and not i in cut]
+        frames += end + cut
+        print 'frames', frames
+        print NF
         sigma, mu, theta, alpha, gamma, d, r, b, ant = [],[],[],[],[],[],[],[],[]
 
         for frame in frames:
@@ -206,12 +208,13 @@ class myGLCanvas(GLCanvas):
                 sigma.append(0)
             else:
                 sigma.append(2)
-                
+            print self.elements[frame-1].ant
             i = [i for i in range(len(frames)) if frames[i] == self.elements[frame-1].ant]
+            
             if len(i)==0 and self.elements[frame-1].ant==self.structure[4][0]:
                 ant.append(0)
             elif len(i)>0:
-                rant.append(i[0])
+                ant.append(i[0]+1)
             else:
                 msg = wx.MessageDialog (None, 'Export error, cannot deifne the parameters.', style=wx.OK|wx.CENTRE)
                 msg.ShowModal()
@@ -223,12 +226,12 @@ class myGLCanvas(GLCanvas):
                 mu.append(0)
         
             if isinstance(self.elements[frame-1], SuperRevoluteJoint) and not self.elements[frame-1].virtual_joint:
-                theta.append(var('th%s' % (len(theta+1))))
+                theta.append(var('th%s' % (len(theta)+1)))
             else:
                 theta.append(self.elements[frame-1].theta)
                 
-            if isinstance(self.elements[frame-1], SuperRevoluteJoint) and not self.elements[frame-1].virtual_joint:
-                theta.append(var('r%s' % (len(theta+1))))
+            if isinstance(self.elements[frame-1], SuperPrismaticJoint) and not self.elements[frame-1].virtual_joint:
+                r.append(var('r%s' % (len(theta)+1)))
             else:
                 r.append(self.elements[frame-1].r)
                 
@@ -245,7 +248,7 @@ class myGLCanvas(GLCanvas):
         robot.r[1:] = r
         robot.b[1:] = b
         robot.ant[1:] = ant
-        
+        robot.mu[1:] = mu
                     
         parfile.writepar(robot)
         
@@ -300,7 +303,6 @@ class myGLCanvas(GLCanvas):
             branches[-1], links, used, joints, fixed, my_links= self.GetBranch(key, links, used, joints, fixed, cut_joints, my_links)
 
         for branch in branches:
-            
             if len(branch)>1 and [i for i in cut_joints if i[1]==branch[-1] and i[2]==branch[-2]]:
 
                 if isinstance(self.elements[branch[-1]-1], SuperRevoluteJoint):
@@ -331,8 +333,6 @@ class myGLCanvas(GLCanvas):
         struct.append(fixed)
         struct.append(cut_joints)
         struct.append(my_links)
-        print 'struct', struct
-        print 'branches', branches
         return struct, branches
 
     def FindKey(self, links, branches):
@@ -427,6 +427,10 @@ class myGLCanvas(GLCanvas):
     def AddAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not name[0] or not isinstance(self.elements[name[0]-1],Point):
+                if self.parent.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 if not [self.parent.data.FlagGet('ACTIVE_LINK'),name[0]] in self.links:
                     if len([i for i in self.links if i[1]==name[0]])<2:
                         self.links.append([self.parent.data.FlagGet('ACTIVE_LINK'),name[0]])
@@ -435,13 +439,17 @@ class myGLCanvas(GLCanvas):
                         elif name[0]  and not [i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if all(i== self.elements[name[0]-1].T[3,0:3])]:
                             self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos.append(self.elements[name[0]-1].T[3,0:3])
                 
-                self.parent.data.FlagReset('PARAMETERS')
+                self.parent.data.FlagSet('PARAMETERS',3)
                 self.parent.data.FlagReset('ADD_ANC')
                 break
 
     def RemAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not isinstance(self.elements[name[0]-1],Point) or not name[0]:
+                if self.parent.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.links=[i for i in self.links if not i==[self.parent.data.FlagGet('ACTIVE_LINK'),name[0]]]
 
                 if name[0]:
@@ -451,13 +459,17 @@ class myGLCanvas(GLCanvas):
                     self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = [
                         i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if not all(i==[0,0,0])]
 
-                self.parent.data.FlagReset('PARAMETERS')
+                self.parent.data.FlagSet('PARAMETERS',3)
                 self.parent.data.FlagReset('REM_ANC')
                 break
 
     def MakeConstrain(self, my_buffer, flag):
             for min_d, max_d, name in my_buffer:
                 if  not name[0] or not isinstance(self.elements[name[0]-1],Point):
+                    if self.parent.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                     if self.parent.data.FlagGet(flag)==1:
                         self.plane.append(name[0])
                         self.parent.data.FlagIncrement(flag)
@@ -483,16 +495,15 @@ class myGLCanvas(GLCanvas):
                                 self.elements[name[0]-1].T[3,0:3]=add(axis.T[3,0:3],multiply(u,val))
 
                         del self.plane[:]
-                        self.parent.data.FlagReset('PARAMETERS')
+                        self.parent.data.FlagSet('PARAMETERS',3)
                         self.parent.data.FlagReset(flag)
                     elif not name[0]:
                         del self.plane[:]
-                        self.parent.data.FlagReset('PARAMETERS')
+                        self.parent.data.FlagSet('PARAMETERS',3)
                         self.parent.data.FlagReset(flag)
                     break
                         
     def Delete(self,name):
-        print 'del'
         if name and name[0]:
             if len(name)>1:
                 for l in [i for i in self.links if i[1]==name[0]]:
@@ -512,7 +523,7 @@ class myGLCanvas(GLCanvas):
             del self.elements[name[0]-1]
             self.my_id -= 1
             self.parent.data.FlagReset('DELETE')
-            self.parent.data.FlagReset('PARAMETERS')
+            self.parent.data.FlagSet('PARAMETERS',3)
             return True
                 
     def OnDelete(self, my_buffer):
@@ -561,7 +572,8 @@ class myGLCanvas(GLCanvas):
         vect1 /= norm(vect1)
         vect2 /= norm(vect2)
         if norm(cross(vect1,vect2))<0.01:
-            print 'Cannot create the plane, points are colinear'
+            msg = wx.MessageDialog (None, 'Cannot define the frame, points are coolinear', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
         else:
             normal = cross(vect1,vect2)
             normal /= norm(normal)  
@@ -595,7 +607,8 @@ class myGLCanvas(GLCanvas):
         vect2 /= norm(vect2)
         
         if norm(cross(vect1,vect2))<0.01:
-            print 'Cannot create the plane, points on the line'
+            msg = wx.MessageDialog (None, 'Cannot define the frame', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
         else:
             normal = cross(vect1,vect2)
             normal /= norm(normal)
@@ -634,7 +647,8 @@ class myGLCanvas(GLCanvas):
         else:
             s = 0
         if norm(cross(vect[0],vect[1]))<0.01 or abs(s) > 0.2:
-            print 'Cannot create the plane, line to not intersect'
+            msg = wx.MessageDialog (None, 'Cannot define the frame, points lines do not cross', style=wx.OK|wx.CENTRE)
+            msg.ShowModal()
         else:
             normal = cross(vect[0],vect[1])
             normal /= norm(normal)
@@ -829,9 +843,7 @@ class myGLCanvas(GLCanvas):
             if joint==0 or not isinstance(self.elements[joint-1], Point):
                 if joint:
                     self.elements[joint-1].draw()
-                else :
-                    self.globFrame.draw()
-                
+                                
             for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
                 self.Transform(k[1:])
                 
@@ -844,17 +856,17 @@ class myGLCanvas(GLCanvas):
         next_branch = []
         for joint in branch:
             if joint==0 or not isinstance(self.elements[joint-1], Point):
-                if not init and not (branch == self.branches[self.structure[0]][1:]):
-                    self.elements[joint-1].param = 6
-                elif joint:
-                    self.elements[joint-1].param = 4
-                if joint:
-                    self.elements[joint-1].ant = old
                 old_T = self.Parameters(joint,old_T)
+                self.elements[joint-1].ant = old
                 old = joint
+                if not init:
+                    self.elements[joint-1].param = 6
+                else:
+                    self.elements[joint-1].param = 4
                 if joint == self.branches[self.structure[0]][2]:
                     if not (self.elements[joint-1].gamma==0 and self.elements[joint-1].b==0):
                         self.elements[joint-1].param = 6
+                
                 
             for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
 ##                next_branch.append([k[1:],[],old])
@@ -888,7 +900,7 @@ class myGLCanvas(GLCanvas):
                 if isinstance(self.elements[joint-1], SuperRevoluteJoint):
                     self.elements[joint-1].theta = 0
                 if isinstance(self.elements[joint-1], SuperPrismaticJoint):
-                    self.elements[joint-1].r = 0.5
+                    self.elements[joint-1].r = 0.2
 
     def GetTransforms(self, branch, old_T, next_branch):
         new_T = old_T
@@ -979,6 +991,10 @@ class myGLCanvas(GLCanvas):
         self.Refresh(False)
 
     def DrawElements(self, my_type, T=identity(4), pos=[0,0,0]):
+        if self.parent.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
         if my_type=='POINT':
             self.elements.append(Point(pos, self.my_id,0))
             self.elements[-1].set_length(0.3)
@@ -1000,7 +1016,7 @@ class myGLCanvas(GLCanvas):
             else:
                 msg = wx.MessageDialog (None, 'Maximu value of indepentend elements has been achived. New elements will not be pickble', style=wx.OK|wx.CENTRE)
                 msg.ShowModal()
-        self.parent.data.FlagReset('PARAMETERS')
+        self.parent.data.FlagSet('PARAMETERS',3)
 
                 
     ##OpenGL handling
@@ -1031,8 +1047,8 @@ class myGLCanvas(GLCanvas):
         self.OnDraw()
         self.Redraw()
         gl.glPopMatrix()
-        for b, n,m in my_buffer:
-            print m
+        for a,b, name in my_buffer:
+            print name
         return my_buffer
         
     def InitGL(self):

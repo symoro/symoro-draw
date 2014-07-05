@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+5#!/usr/bin/env python
 # -*- coding: utf-8
 
 import wx
@@ -504,15 +504,12 @@ class MainFrame(wx.Frame):
                                                             transpose(self.canvas['CANVAS'].elements[self.canvas['CANVAS'].structure[4][0]-1].T),
                                                             self.canvas['CANVAS'].structure[4][0]]]
                         while next_branch:
-                                next_branch += self.canvas['CANVAS'].GetParameters(next_branch[0][0],next_branch[0][1],next_branch[0][2])
-
                                 new_branch = self.canvas['CANVAS'].GetParameters(next_branch[0][0],next_branch[0][1],next_branch[0][2])
                                 self.canvas['CANVAS'].SetParameters(next_branch[0][0])
                                 next_branch += self.canvas['CANVAS'].GetTransforms(next_branch[0][0],next_branch[0][1], new_branch)
                                 del next_branch[0]
+                                
                         self.data.FlagSet('PARAMETERS',1)
-                        print self.canvas['CANVAS'].structure
-                        print self.canvas['CANVAS'].branches
                 
         def OnStructure(self,event):
                 self.canvas['CANVAS'].SaveConfiguration()

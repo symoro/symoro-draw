@@ -861,7 +861,7 @@ class myGLCanvas(GLCanvas):
 
         if not self.parent.data.FlagGet('MODE'):
             for element in self.elements:
-                element.show_frame = False
+##                element.show_frame = False
                 element.draw_joint()
 
         elif self.branches:
@@ -914,8 +914,7 @@ class myGLCanvas(GLCanvas):
                 
                 
             for k in [i for i in self.branches[self.structure[0]+1:self.structure[1]+1] if i[0]==joint]:
-##                next_branch.append([k[1:],[],old])
-                next_branch.append([k[1:],old_T,old])
+                next_branch.append([k[1:],[],old])
 
             init = True
             
@@ -969,22 +968,28 @@ class myGLCanvas(GLCanvas):
     def Parameters(self,  new_id,old_T):
         
         T = dot(inv(old_T),transpose(self.elements[new_id-1].T))
-        if abs(T[0,2])<0.002 and abs(T[1,2])<0.002:
-            gamma = 0
+        
+        if abs(T[0,2])<0.001 and abs(T[1,2])<0.001:
+            alpha = 0
+            b = T[2,3]
+            r = 0
+            d = sqrt((T[0,3]*T[0,3])+(T[1,3]*T[1,3]))
+            gamma = arctan2(T[1,3],T[0,3])
+            theta = arctan2(-cos(gamma)*T[0,1]-sin(gamma)*T[1,1],cos(gamma)*T[0,0]+sin(gamma)*T[1,0])
         else:
             gamma = arctan2(-T[0,2],T[1,2])
-        alpha = arctan2(sin(gamma)*T[0,2]-cos(gamma)*T[1,2],T[2,2])
-        theta = arctan2(-cos(gamma)*T[0,1]-sin(gamma)*T[1,1],cos(gamma)*T[0,0]+sin(gamma)*T[1,0])
-        d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
+            alpha = arctan2(sin(gamma)*T[0,2]-cos(gamma)*T[1,2],T[2,2])
+            theta = arctan2(-cos(gamma)*T[0,1]-sin(gamma)*T[1,1],cos(gamma)*T[0,0]+sin(gamma)*T[1,0])
+            d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
 
-        if abs(sin(alpha))<0.005:
-            r = 0
-        elif not sin(gamma):
-            r = T[0,3]/sin(alpha)
-        else:
-            r = (T[0,3]-d*cos(gamma))/sin(gamma)/sin(alpha)
+            if abs(sin(alpha))<0.002:
+                r = 0
+            elif not sin(gamma):
+                r = T[0,3]/sin(alpha)
+            else:
+                r = (T[0,3]-d*cos(gamma))/sin(gamma)/sin(alpha)
             
-        b =T[2,3]-r*cos(alpha)
+            b = T[2,3]-r*cos(alpha)
 
         if new_id:
             element = self.elements[new_id-1]
@@ -998,7 +1003,6 @@ class myGLCanvas(GLCanvas):
         element.b = b    
 
         new_T = self.GetT( gamma, b, alpha, d, theta, r)
-        
 
         return old_T.dot(new_T)
 

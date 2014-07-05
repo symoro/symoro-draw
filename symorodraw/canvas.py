@@ -873,7 +873,7 @@ class myGLCanvas(GLCanvas):
 
         if not self.parent.data.FlagGet('MODE'):
             for element in self.elements:
-##                element.show_frame = False
+                element.show_frame = False
                 element.draw_joint()
 
         elif self.branches:
@@ -956,9 +956,9 @@ class myGLCanvas(GLCanvas):
                     
         for branch in self.branches[self.structure[0]:self.structure[1]+1]:
             for joint in branch:
-                if isinstance(self.elements[joint-1], SuperRevoluteJoint):
+                if joint and isinstance(self.elements[joint-1], SuperRevoluteJoint):
                     self.elements[joint-1].theta = 0
-                if isinstance(self.elements[joint-1], SuperPrismaticJoint):
+                elif joint and isinstance(self.elements[joint-1], SuperPrismaticJoint):
                     self.elements[joint-1].r = 0.2
 
     # Caluclating the transforamtion matrix for new branch
@@ -981,15 +981,18 @@ class myGLCanvas(GLCanvas):
     def Parameters(self,  new_id,old_T):
         
         T = dot(inv(old_T),transpose(self.elements[new_id-1].T))
-        if abs(T[0,2])<0.02 and abs(T[1,2])<0.02:
-            gamma = 0
+        if abs(T[0,2])<0.002 and abs(T[1,2])<0.002:
+            print 'here1'
+            gamma = arctan2(-T[0,2],T[1,2])
+            print 
         else:
             gamma = arctan2(-T[0,2],T[1,2])
         alpha = arctan2(sin(gamma)*T[0,2]-cos(gamma)*T[1,2],T[2,2])
         theta = arctan2(-cos(gamma)*T[0,1]-sin(gamma)*T[1,1],cos(gamma)*T[0,0]+sin(gamma)*T[1,0])
         d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
 
-        if not sin(alpha):
+        if abs(sin(alpha))<0.005:
+            print 'here2'
             r = T[2,3]
         elif not sin(gamma):
             r = T[0,3]/sin(alpha)

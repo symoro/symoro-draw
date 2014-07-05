@@ -458,6 +458,7 @@ class MainFrame(wx.Frame):
         def OnDefineD_H(self,event):
                 self.DefineD_H()
                 if self.canvas['CANVAS'].structure:
+                        self.UpdateValues()
                         self.data.FlagSet('MODE',1)
         # Subfunction to the Defining parameters callbacks                
         def DefineD_H(self):
@@ -473,9 +474,12 @@ class MainFrame(wx.Frame):
                                 self.canvas['CANVAS'].SetParameters(next_branch[0][0])
                                 next_branch += self.canvas['CANVAS'].GetTransforms(next_branch[0][0],next_branch[0][1], new_branch)
                                 del next_branch[0]
-                        self.data.FlagSet('PARAMETERS',1)           
+                        self.data.FlagSet('PARAMETERS',1)
+                        print self.canvas['CANVAS'].structure
+                        print self.canvas['CANVAS'].branches
                 
         def OnStructure(self,event):
+                self.canvas['CANVAS'].SaveConfiguration()
                 self.data.FlagReset('MODE')
 
         def OnCheckParameters(self, event):
@@ -485,17 +489,34 @@ class MainFrame(wx.Frame):
                         return
                 elif self.data.FlagGet('PARAMETERS')==2:
                         self.canvas['CANVAS'].LoadConfiguration()
+                        self.UpdateValues()
                 if self.canvas['CANVAS'].structure:
                         self.data.FlagSet('MODE',1)
 
         def OnConfiguration(self, event):
-                if not self.data.FlagGet('PARAMETERS'):
+                if not self.data.FlagGet('PARAMETERS') or self.data.FlagGet('PARAMETERS') == 3:
                         self.DefineD_H()
                 self.data.FlagSet('PARAMETERS',2)
                 self.canvas['CANVAS'].SaveConfiguration()
                 self.canvas['CANVAS'].SetConfiguration()
+                self.UpdateValues()
+                
                 if self.canvas['CANVAS'].structure:
                         self.data.FlagSet('MODE',1)
+
+        def UpdateValues(self):
+                if not self.data.FlagGet('ACTIVE_JOINT') == -2:
+                        joint = self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1]
+                else:
+                        joint = self.canvas['CANVAS'].globFrame
+                self.spins['ON_R'].SetValue(joint.r)
+                self.spins['ON_THETA'].SetValue(joint.theta)
+                self.spins['ON_D'].SetValue(joint.d)
+                self.spins['ON_ALPHA'].SetValue(joint.alpha)
+                self.spins['ON_B'].SetValue(joint.b)
+                self.spins['ON_GAMMA'].SetValue(joint.gamma)
+                self.spins['VAR_ON_THETA'].SetValue(joint.theta)
+                self.spins['VAR_ON_R'].SetValue(joint.r)
 
         def OnCut(self, event):
                 self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].cut_joint = event.EventObject.GetValue()
@@ -615,12 +636,9 @@ class MainFrame(wx.Frame):
                 self.check_boxes['ON_ACTIVE'].SetValue(joint.active)
                 self.check_boxes['ON_CUT_JOINT'].SetValue(joint.cut_joint)
                 self.data.FlagSet('ACTIVE_JOINT',joint_id)
-                self.spins['ON_R'].SetValue(joint.r)
-                self.spins['ON_THETA'].SetValue(joint.theta)
-                self.spins['ON_D'].SetValue(joint.d)
-                self.spins['ON_ALPHA'].SetValue(joint.alpha)
-                self.spins['ON_B'].SetValue(joint.b)
-                self.spins['ON_GAMMA'].SetValue(joint.gamma)
+                self.UpdateValues()
+                
+                
 
         def ActiveLink(self, link_id):
                 self.sizers['PANEL_JOINT_SIZER'].Show(self.data.GetValue('ON_ANCESTORS','position'))

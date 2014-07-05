@@ -690,34 +690,34 @@ class data():
                                 'submenu':False
                                     }
         self.widgets['PARALLEL'] = {'w_type':'menu_item',
-                                'parent':'VIEW',
+                                'parent':'CONSTRAINTS',
                                 'label':'Parallel',
                                 'position':0,
                                 'callback':'OnParallel'
                                 }
                
         self.widgets['PERPENDICULAR'] = {'w_type':'menu_item',
-                                'parent':'VIEW',
+                                'parent':'CONSTRAINTS',
                                 'label':'Perpendicular Space',
                                 'position':1,
                                 'callback':'OnPerpendicular'
                                 }
         
         self.widgets['PER_PLANE'] = {'w_type':'menu_item',
-                                'parent':'VIEW',
+                                'parent':'CONSTRAINTS',
                                 'label':'Perpendicular Plane',
                                 'position':2,
                                 'callback':'OnPlanePerpendicular'
                                 }
         self.widgets['AT_ANGLE'] = {'w_type':'menu_item',
-                                'parent':'VIEW',
+                                'parent':'CONSTRAINTS',
                                 'label':'At Angle',
                                 'position':3,
                                 'callback':'OnAtAngle'
                                 }
         
         self.widgets['AT_DISTANCE'] = {'w_type':'menu_item',
-                                'parent':'VIEW',
+                                'parent':'CONSTRAINTS',
                                 'label':'At Distance',
                                 'position':4,
                                 'callback':'OnAtDistance'

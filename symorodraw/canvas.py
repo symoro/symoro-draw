@@ -861,7 +861,7 @@ class myGLCanvas(GLCanvas):
 
         if not self.parent.data.FlagGet('MODE'):
             for element in self.elements:
-##                element.show_frame = False
+                element.show_frame = False
                 element.draw_joint()
 
         elif self.branches:

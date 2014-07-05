@@ -422,20 +422,44 @@ class data():
                                     'active':False,
                                     'callback':'OnCut'
                                     }
+        self.widgets['ON_ANALYSIS'] = {'w_type':'static_sizer',
+                                     'label':'Parmeters',
+                                     'panel':'PANEL_SIDE',
+                                     'parent':'GRID_SIDE',
+                                     'horizontal':0,
+                                     'vertical':4,
+                                     'active':True,
+                                     'orientation':wx.VERTICAL,
+                                    'flag':wx.RIGHT
+                                    }
         self.widgets['ON_DEFINE_D_H'] = {'w_type':'button',
-                                    'label':'Parameters',
-                                    'parent':'GRID_SIDE',
-                                    'horizontal':0,
-                                    'vertical':3,
+                                    'label':'Define',
+                                    'parent':'ON_ANALYSIS',
+                                    'position':0,
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnDefineD_H',
                                     'active':True
                                     }
+        self.widgets['ON_CHECK_D_H'] = {'w_type':'button',
+                                    'label':'Check',
+                                    'parent':'ON_ANALYSIS',
+                                    'position':1,
+                                    'panel':'PANEL_SIDE',
+                                    'callback':'OnCheckParameters',
+                                    'active':True
+                                    }
+        self.widgets['ON_CONFIGURATION'] = {'w_type':'button',
+                                    'label':'Configuration',
+                                    'parent':'ON_ANALYSIS',
+                                    'position':2,
+                                    'panel':'PANEL_SIDE',
+                                    'callback':'OnConfiguration',
+                                    'active':True
+                                    }
         self.widgets['ON_STRUCTURE'] = {'w_type':'button',
                                     'label':'Structure',
-                                    'parent':'GRID_SIDE',
-                                    'horizontal':0,
-                                    'vertical':4,
+                                    'parent':'ON_ANALYSIS',
+                                    'position':3,
                                     'panel':'PANEL_SIDE',
                                     'callback':'OnStructure',
                                     'active':True
@@ -622,6 +646,7 @@ class data():
         self.flags['PERPENDICULAR'] = [0, 'constraints']
         self.flags['AT_DISTANCE'] = [0, 'constraints']
         self.flags['AT_ANGLE'] = [0, 'constraints']
+        self.flags['PARAMETERS'] = [0, 'initalization']
 
 ##  Methods widgets
 

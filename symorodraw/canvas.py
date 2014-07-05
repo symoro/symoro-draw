@@ -69,6 +69,7 @@ class myGLCanvas(GLCanvas):
         self.links = []
         self.branches = []
         self.d_init = False
+        self.configuration = []
 
 
     def assign_mono_scale(self):
@@ -256,7 +257,6 @@ class myGLCanvas(GLCanvas):
        
         for i in reversed(to_delete):
             self.Delete([i])
-            print 'here'
 
 ##        self.branches = []
 ##        self.struct = []
@@ -435,7 +435,7 @@ class myGLCanvas(GLCanvas):
                         elif name[0]  and not [i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if all(i== self.elements[name[0]-1].T[3,0:3])]:
                             self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos.append(self.elements[name[0]-1].T[3,0:3])
                 
-        
+                self.parent.data.FlagReset('PARAMETERS')
                 self.parent.data.FlagReset('ADD_ANC')
                 break
 
@@ -450,7 +450,8 @@ class myGLCanvas(GLCanvas):
                 else:
                     self.elements[self.parent.data.FlagGet('ACTIVE_JOINT')-1].anc_pos = [
                         i for i in self.elements[self.parent.data.FlagGet('ACTIVE_LINK')-1].anc_pos if not all(i==[0,0,0])]
-                    
+
+                self.parent.data.FlagReset('PARAMETERS')
                 self.parent.data.FlagReset('REM_ANC')
                 break
 
@@ -482,9 +483,11 @@ class myGLCanvas(GLCanvas):
                                 self.elements[name[0]-1].T[3,0:3]=add(axis.T[3,0:3],multiply(u,val))
 
                         del self.plane[:]
+                        self.parent.data.FlagReset('PARAMETERS')
                         self.parent.data.FlagReset(flag)
                     elif not name[0]:
                         del self.plane[:]
+                        self.parent.data.FlagReset('PARAMETERS')
                         self.parent.data.FlagReset(flag)
                     break
                         
@@ -509,6 +512,7 @@ class myGLCanvas(GLCanvas):
             del self.elements[name[0]-1]
             self.my_id -= 1
             self.parent.data.FlagReset('DELETE')
+            self.parent.data.FlagReset('PARAMETERS')
             return True
                 
     def OnDelete(self, my_buffer):
@@ -951,6 +955,22 @@ class myGLCanvas(GLCanvas):
                   cos(alpha),r*cos(alpha)+b],
                  [0,0,0,1]]
         return new_T
+
+    def SaveConfiguration(self):
+        self.configuration = []
+        for element in self.elements:
+            if not isinstance(element, Point):
+                self.configuration.append([element.my_id, element.gamma, element.b, element.alpha, element.d, element.theta, element.r])
+
+    def LoadConfiguration(self):
+        for i in self.configuration:
+            self.elements[i[0]-1].gamma = i[1]
+            self.elements[i[0]-1].b = i[2]
+            self.elements[i[0]-1].alpha = i[3]
+            self.elements[i[0]-1].d = i[4]
+            self.elements[i[0]-1].theta = i[5]
+            self.elements[i[0]-1].r = i[6]
+                
         
     
     def Redraw(self):
@@ -980,6 +1000,9 @@ class myGLCanvas(GLCanvas):
             else:
                 msg = wx.MessageDialog (None, 'Maximu value of indepentend elements has been achived. New elements will not be pickble', style=wx.OK|wx.CENTRE)
                 msg.ShowModal()
+        self.parent.data.FlagReset('PARAMETERS')
+
+                
     ##OpenGL handling
     def Pick(self):
         self.globFrame.named = False

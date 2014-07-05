@@ -481,6 +481,11 @@ class MainFrame(wx.Frame):
                 self.Init('REM_ANC')
 
         def OnDefineD_H(self,event):
+                self.DefineD_H()                
+                self.data.FlagSet('MODE',1)
+                        
+        def DefineD_H(self):
+                print 'here'
                 self.canvas['CANVAS'].structure, self.canvas['CANVAS'].branches = self.canvas['CANVAS'].DefineStructure()
                 if self.canvas['CANVAS'].structure and self.canvas['CANVAS'].branches:
                         next_branch = [[self.canvas['CANVAS'].branches[self.canvas['CANVAS'].structure[0]][1:],
@@ -493,12 +498,28 @@ class MainFrame(wx.Frame):
                                 self.canvas['CANVAS'].SetParameters(next_branch[0][0])
                                 next_branch += self.canvas['CANVAS'].GetTransforms(next_branch[0][0],next_branch[0][1], new_branch)
                                 del next_branch[0]
-##                        self.canvas['CANVAS'].SetConfiguration()
-                                
-                        self.data.FlagSet('MODE',1)
+                self.data.FlagSet('PARAMETERS',1)           
+                
 
         def OnStructure(self,event):
                 self.data.FlagReset('MODE')
+
+        def OnCheckParameters(self, event):
+                if not self.data.FlagGet('PARAMETERS'):
+                        self.DefineD_H()
+                elif self.data.FlagGet('PARAMETERS')==2:
+                        self.canvas['CANVAS'].LoadConfiguration()
+                self.data.FlagSet('MODE',1)
+
+        def OnConfiguration(self, event):
+                if not self.data.FlagGet('PARAMETERS'):
+                        self.DefineD_H()
+                self.data.FlagSet('PARAMETERS',2)
+                self.canvas['CANVAS'].SaveConfiguration()
+                self.canvas['CANVAS'].SetConfiguration()
+                self.data.FlagSet('MODE',1)
+
+        
 
         def OnAlpha(self, event):
                 self.canvas['CANVAS'].elements[self.data.FlagGet('ACTIVE_JOINT')-1].alpha = event.EventObject.GetValue()

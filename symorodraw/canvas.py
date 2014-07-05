@@ -970,9 +970,7 @@ class myGLCanvas(GLCanvas):
         
         T = dot(inv(old_T),transpose(self.elements[new_id-1].T))
         if abs(T[0,2])<0.002 and abs(T[1,2])<0.002:
-            print 'here1'
-            gamma = arctan2(-T[0,2],T[1,2])
-            print 
+            gamma = 0
         else:
             gamma = arctan2(-T[0,2],T[1,2])
         alpha = arctan2(sin(gamma)*T[0,2]-cos(gamma)*T[1,2],T[2,2])
@@ -980,8 +978,7 @@ class myGLCanvas(GLCanvas):
         d = T[1,3]*sin(gamma)+T[0,3]*cos(gamma)
 
         if abs(sin(alpha))<0.005:
-            print 'here2'
-            r = T[2,3]
+            r = 0
         elif not sin(gamma):
             r = T[0,3]/sin(alpha)
         else:

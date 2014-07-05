@@ -1,0 +1,106 @@
+IDENTIFERS:
+
+//menu (callback)
+MENU_BAR
+	FILE
+		EXPORT (OnExport)
+	DRAW
+		JOINTS
+			J_PRISMATIC (OnPrismatic)
+			J_REVOLUTE (OnRevolute)
+		PLANES
+			P_1 (OnPlane1)
+			P_2 (OnPlane2)
+			P_3 (OnPlane3)
+		LINK (OnRefPoint)
+	VIEW
+		FRONT (OnFront)
+		BACK (OnBack)
+		TOP (OnTop)
+		BOTTOM(OnBottom)
+		RIGHT (OnRight)
+		LEFT (OnLeft)
+	CONSTRAINTS
+		PARALLEL (OnParallel)
+		PERPENDICULAR (OnPerpendicular)
+		PER_PLANE (OnPlanePerpendicular)
+		AT_ANGLE (OnAtAngle)
+		AT_DISTANCE (OnAtDistance)
+		
+
+
+//gui (callback)
+MAIN
+	PANEL_V
+		PANEL_SIZE_V
+			CANVAS
+			PANEL
+				PANEL_TOP
+					PANEL_TOP_SIZER
+						GRID
+							ON_JOINTS
+								ON_REVOLUTE (OnRevolute)
+								ON_PRISMATIC (OnPrismatic)
+							ON_PLANES
+								ON_PLANE3 (OnPlane1)
+								ON_PLANE2 (OnPlane2)
+								ON_PLANE1 (OnPlane3)
+							ON_REFERENCES
+								ON_POINT (OnRefPoint) ## Link panel
+				PANEL_TOP_2
+					PANEL_TOP_SIZER_2
+						GRID_2
+							ON_CONSRAINTS
+								ON_PARALLEL (OnParallel)
+								ON_PERPENDICULAR (OnPerpendicular)
+								ON_PER_PLANE (OnPlanePerpendicular)
+								ON_AT_ANGLE (OnAtAngle)
+								ON_AT_DISTANCE (OnAtDistance)
+	PANEL_SIDE
+		PANEL_SIDE_SIZER
+				GRID_SIDE
+					ON_DELETE (OnDelete)
+					ON_ANALYSIS
+						ON_DEFINE_D_H (OnDefineD_H)
+						ON_CHECK_D_H (OnCheckParameters)
+						ON_CONFIGURATION (OnConfiguration)
+						ON_STRUCTURE (OnStructure)
+					PANEL_JOINT_SIZER
+						ON_ANCESTORS
+							ON_ADD_ANC (OnAddAncestor)
+							ON_REM_ANC (OnRemoveAncestor)
+						ON_CHANGE_DIR (OnChangeZAxis)
+						ON_ACTIVE (OnActive)
+						ON_CUT_JOINT (OnCut)
+						ON_VARIABLES
+							ON_VAR_S_THETA 
+								VAR_TEXT_THETA
+								VAR_ON_THETA (OnTheta)
+							ON_VAR_S_R
+								VAR_TEXT_R
+								VAR_ON_R (OnR)
+						ON_PARAMETERS
+							ON_PARAM_S_B
+								TEXT_B
+								ON_B (OnB)
+							ON_PARAM_S_GAMMA
+								TEXT_GAMMA
+								ON_GAMMA (OnGamma)
+							ON_PARAM_S_D
+								TEXT_D
+								ON_D (OnD)
+							ON_PARAM_S_ALPHA
+								TEXT_ALPHA
+								ON_ALPHA (OnAlpha)
+							ON_PARAM_S_R
+								TEXT_R
+								ON_R (OnR)
+							ON_PARAM_S_THETA
+								TEXT_THETA
+								ON_THETA (OnTheta)
+
+
+							
+								
+						
+

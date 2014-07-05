@@ -380,12 +380,24 @@ class MainFrame(wx.Frame):
 # Callbacks
 #       Planes
         def OnPlane1(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return 
                 self.Init('PLANE1')
         
         def OnPlane2(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('PLANE2')
         
         def OnPlane3(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('PLANE3')
 
 #       Export		
@@ -434,25 +446,49 @@ class MainFrame(wx.Frame):
 
 #       Create Joints
         def OnRevolute(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('REVOLUTE')
                 self.data.FlagReset('PICK')
                 
         def OnPrismatic(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('PRISMATIC')
                 self.data.FlagReset('PICK')
                 
         def OnFixed(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('FIXED')
                 self.data.FlagReset('PICK')
 
 # PANEL_SIDE elements
         def OnDelete(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot remove an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('DELETE')
 
         def OnAddAncestor(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('ADD_ANC')
 
         def OnRemoveAncestor(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('REM_ANC')
 
         def OnDefineD_H(self,event):
@@ -562,18 +598,38 @@ class MainFrame(wx.Frame):
 
         #Constraints
         def OnParallel(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('PARALLEL')
 
         def OnPerpendicular(self, event):
-                 self.Init('PERPENDICULAR')
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
+                self.Init('PERPENDICULAR')
 
         def OnPlanePerpendicular(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('PLANE_PERPENDICULAR')
 
         def OnAtDistance(self, event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('AT_DISTANCE')
 
         def OnAtAngle(self,event):
+                if self.data.FlagGet('MODE'):
+                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
+                        msg.ShowModal()
+                        return
                 self.Init('AT_ANGLE')
 
         

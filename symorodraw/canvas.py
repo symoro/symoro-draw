@@ -188,8 +188,8 @@ class myGLCanvas(GLCanvas):
 
     # Exporting to the .par file
     def Export(self, name):
-        NJ = len([i for i in self.elements if isinstance(i, SuperRevoluteJoint) or isinstance(i, SuperPrismaticJoint)])
-        NL = len([i for i in self.elements if isinstance(i, Point)])-1
+        NJ = len([i for i in self.elements if (isinstance(i, SuperRevoluteJoint) or isinstance(i, SuperPrismaticJoint)) and not i.virtual_joint] )
+        NL = len([i for i in self.elements if isinstance(i, Point) and not i.virtual_joint] )-1
         NF = NL+2*(NJ-NL)
         
         if not self.structure:
@@ -458,10 +458,6 @@ class myGLCanvas(GLCanvas):
     def AddAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not name[0] or not isinstance(self.elements[name[0]-1],Point):
-                if self.parent.data.FlagGet('MODE'):
-                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
-                        msg.ShowModal()
-                        return
                 if not [self.parent.data.FlagGet('ACTIVE_LINK'),name[0]] in self.links:
                     if len([i for i in self.links if i[1]==name[0]])<2:
                         self.links.append([self.parent.data.FlagGet('ACTIVE_LINK'),name[0]])
@@ -478,10 +474,6 @@ class myGLCanvas(GLCanvas):
     def RemAncestor(self, my_buffer):
         for a, b, name in my_buffer:
             if not isinstance(self.elements[name[0]-1],Point) or not name[0]:
-                if self.parent.data.FlagGet('MODE'):
-                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
-                        msg.ShowModal()
-                        return
                 self.links=[i for i in self.links if not i==[self.parent.data.FlagGet('ACTIVE_LINK'),name[0]]]
 
                 if name[0]:
@@ -499,10 +491,6 @@ class myGLCanvas(GLCanvas):
     def MakeConstrain(self, my_buffer, flag):
             for min_d, max_d, name in my_buffer:
                 if  not name[0] or not isinstance(self.elements[name[0]-1],Point):
-                    if self.parent.data.FlagGet('MODE'):
-                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
-                        msg.ShowModal()
-                        return
                     if self.parent.data.FlagGet(flag)==1:
                         self.plane.append(name[0])
                         self.parent.data.FlagIncrement(flag)
@@ -1051,10 +1039,6 @@ class myGLCanvas(GLCanvas):
 
     # Setting up and create the element in the program, menage global id, 
     def DrawElements(self, my_type, T=identity(4), pos=[0,0,0]):
-        if self.parent.data.FlagGet('MODE'):
-                        msg = wx.MessageDialog (None, 'Cannot add an element, switch to the structure mode.', style=wx.OK|wx.CENTRE)
-                        msg.ShowModal()
-                        return
         if my_type=='POINT':
             self.elements.append(Point(pos, self.my_id,0))
             self.elements[-1].set_length(0.3)
